@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets (never commit real keys)
+.env*
+!.env.example
+
+# Builds
+dist/
+build/
+*.local
+
+# Vite
+client/dist/
+.vite/
+
+# Logs & debug
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test / coverage
+coverage/
+
+# Editor (optional — remove these lines if you want to commit shared IDE config)
+.idea/
+*.swp
+*.swo

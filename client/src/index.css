@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@layer components {
+  .felt-bg {
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(22, 90, 54, 0.4) 0%, transparent 70%),
+      linear-gradient(180deg, #0a2e1a 0%, #0d3b22 50%, #0a2e1a 100%);
+    background-attachment: fixed;
+  }
+
+  .card-base {
+    @apply relative rounded-lg shadow-card transition-all duration-200;
+    width: 70px;
+    height: 100px;
+    perspective: 600px;
+  }
+
+  .card-face {
+    @apply absolute inset-0 rounded-lg backface-hidden;
+    transition: transform 0.5s ease;
+  }
+
+  .card-back-pattern {
+    background:
+      repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 6px,
+        rgba(212, 160, 23, 0.12) 6px,
+        rgba(212, 160, 23, 0.12) 7px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 6px,
+        rgba(212, 160, 23, 0.12) 6px,
+        rgba(212, 160, 23, 0.12) 7px
+      ),
+      linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold
+           rounded-lg shadow-lg hover:shadow-xl transition-all duration-200
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-wood-700 hover:bg-wood-800 text-gold-200 font-semibold
+           rounded-lg shadow-lg hover:shadow-xl transition-all duration-200
+           active:scale-95 border border-gold-600/30;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 bg-black/30 border border-gold-600/30 rounded-lg
+           text-white placeholder-gray-500 focus:outline-none focus:border-gold-500
+           focus:ring-1 focus:ring-gold-500/50 transition-colors;
+  }
+}
+
+@layer utilities {
+  .backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+}
