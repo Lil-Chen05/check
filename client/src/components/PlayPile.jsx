@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Card from './Card';
 
@@ -8,10 +9,20 @@ export default function PlayPile({
   count,
   canTakeFromPile = false,
   onTakeFromPile,
+  highlightCardId = null,
+  reduceMotion = false,
 }) {
   const strong = reactionArmed;
   const soft = reactionHint && !strong;
   const canTop = canTakeFromPile && typeof onTakeFromPile === 'function';
+
+  /** Only run entrance spring when the top card id actually changed (not on every state broadcast). */
+  const prevTopIdRef = useRef(null);
+  const topId = topCard?.id ?? null;
+  const prevId = prevTopIdRef.current;
+  const idChanged = topId != null && prevId != null && topId !== prevId;
+  const runEnter = !reduceMotion && idChanged;
+  prevTopIdRef.current = topId;
 
   const pileInner = (
     <>
@@ -31,15 +42,21 @@ export default function PlayPile({
           {topCard ? (
             <motion.div
               key={topCard.id}
-              initial={{ scale: 0.5, rotateZ: -15, opacity: 0 }}
+              initial={
+                runEnter ? { scale: 0.5, rotateZ: -15, opacity: 0 } : false
+              }
               animate={{ scale: 1, rotateZ: 0, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
+              exit={reduceMotion ? undefined : { scale: 0.8, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               className={`rounded-lg transition-all duration-200 ${
                 canTop ? 'ring-2 ring-gold-400/50 shadow-glow' : ''
+              } ${
+                highlightCardId && topCard.id === highlightCardId
+                  ? 'ring-2 ring-amber-300/90 shadow-[0_0_16px_rgba(252,211,77,0.45)]'
+                  : ''
               }`}
             >
-              <Card card={topCard} faceUp size="md" />
+              <Card card={topCard} faceUp size="md" motionPreset="static" enableLayout={false} />
             </motion.div>
           ) : (
             <div

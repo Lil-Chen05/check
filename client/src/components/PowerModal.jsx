@@ -166,7 +166,7 @@ export default function PowerModal({ power, players, myId, onResolve }) {
                       className={`w-[48px] h-[68px] rounded-md card-back-pattern border-2 transition-all
                         flex items-center justify-center text-xs
                         ${isPeekedPos
-                          ? 'border-amber-500 opacity-50 cursor-not-allowed'
+                          ? 'border-emerald-500/50 ring-2 ring-emerald-400/90 shadow-[0_0_16px_rgba(52,211,153,0.5)] cursor-not-allowed'
                           : 'border-gold-600/20 hover:border-gold-400 hover:shadow-glow cursor-pointer'
                         }`}
                     >

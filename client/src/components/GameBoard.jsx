@@ -1,9 +1,10 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import PlayerHand from './PlayerHand';
 import DrawPile from './DrawPile';
 import PlayPile from './PlayPile';
 import Card from './Card';
+import { useCompactTableLayout } from '../hooks/useCompactTableLayout';
 
 /** Keep in sync with server/game/Reactions.js MAX_HAND_FOR_STEAL_REACT */
 const MAX_HAND_FOR_STEAL_REACT = 7;
@@ -23,7 +24,19 @@ export default function GameBoard({
   onResolvePower,
   onStartQueuedPower,
   pendingStealGive,
+  /** @type {{ pileHighlightCardId: string|null, slotPulses: Array<{playerId: string, index: number, tone?: string}>, holdingHighlight: boolean, pairSwap: object|null, drawHandSwap: object|null }} */
+  tableFeedback = {
+    pileHighlightCardId: null,
+    slotPulses: [],
+    holdingHighlight: false,
+    pairSwap: null,
+    drawHandSwap: null,
+  },
 }) {
+  const reduceMotion = useReducedMotion();
+  const compactTable = useCompactTableLayout();
+  const handSize = compactTable ? 'xs' : 'sm';
+
   const {
     myId,
     phase,
@@ -45,7 +58,8 @@ export default function GameBoard({
   const opponents = useMemo(() => players.filter(p => p.id !== myId), [players, myId]);
 
   const [reactArmed, setReactArmed] = useState(false);
-  const [queenFirst, setQueenFirst] = useState(null);
+  const [optimisticPowerSecond, setOptimisticPowerSecond] = useState(null);
+  const [optimisticDrawSlot, setOptimisticDrawSlot] = useState(null);
 
   const reactionOpen = reactionWindow?.active || false;
   const effectiveReact = reactArmed && reactionOpen && !pendingStealGive;
@@ -65,8 +79,24 @@ export default function GameBoard({
   }, [phase]);
 
   useEffect(() => {
-    if (!isPowerController || powerType !== 'queen') setQueenFirst(null);
-  }, [isPowerController, powerType]);
+    if (phase !== 'power-resolve') setOptimisticPowerSecond(null);
+  }, [phase]);
+
+  useEffect(() => {
+    if (drawnCard == null) setOptimisticDrawSlot(null);
+  }, [drawnCard]);
+
+  useEffect(() => {
+    if (!optimisticPowerSecond) return undefined;
+    const t = setTimeout(() => setOptimisticPowerSecond(null), 2500);
+    return () => clearTimeout(t);
+  }, [optimisticPowerSecond]);
+
+  useEffect(() => {
+    if (optimisticDrawSlot == null) return undefined;
+    const t = setTimeout(() => setOptimisticDrawSlot(null), 2500);
+    return () => clearTimeout(t);
+  }, [optimisticDrawSlot]);
 
   const canDraw = isMyTurn && phase === 'turn-draw';
   const canTakeFromPile =
@@ -79,24 +109,35 @@ export default function GameBoard({
 
   const redKingPicking = isPowerController && powerType === 'red-king';
 
-  const handleQueenFieldClick = useCallback((playerId, cardIndex) => {
-    if (!queenFirst) {
-      setQueenFirst({ playerId, cardIndex });
-      return;
-    }
-    if (queenFirst.playerId === playerId && queenFirst.cardIndex === cardIndex) {
-      setQueenFirst(null);
-      return;
-    }
-    onResolvePower({ pos1: queenFirst, pos2: { playerId, cardIndex } });
-    setQueenFirst(null);
-  }, [queenFirst, onResolvePower]);
+  const queenAnchor =
+    pendingPower?.type === 'queen' ? pendingPower.queenAnchor ?? null : null;
+
+  const handleQueenFieldClick = useCallback(
+    (playerId, cardIndex) => {
+      const pos = { playerId, cardIndex };
+      if (!queenAnchor) {
+        onResolvePower({ pos1: pos });
+        return;
+      }
+      if (
+        queenAnchor.playerId === playerId &&
+        queenAnchor.cardIndex === cardIndex
+      ) {
+        onResolvePower({ pos1: pos });
+        return;
+      }
+      setOptimisticPowerSecond({ playerId, index: cardIndex });
+      onResolvePower({ pos2: pos });
+    },
+    [queenAnchor, onResolvePower],
+  );
 
   const handleBlackKingPeekClick = useCallback((playerId, cardIndex) => {
     onResolvePower({ targetPlayerId: playerId, cardIndex });
   }, [onResolvePower]);
 
   const handleBlackKingSwapClick = useCallback((playerId, cardIndex) => {
+    setOptimisticPowerSecond({ playerId, index: cardIndex });
     onResolvePower({ toPos: { playerId, cardIndex } });
   }, [onResolvePower]);
 
@@ -128,6 +169,7 @@ export default function GameBoard({
       }
     }
     if (canPlay) {
+      setOptimisticDrawSlot(cardIndex);
       onSwapCard(cardIndex);
       return;
     }
@@ -184,7 +226,6 @@ export default function GameBoard({
     reactArmed,
     isPowerController,
     pendingPower,
-    queenFirst,
     canStartQueuedPower,
     queuedPowerControllerName,
     drawnFromPlayPile,
@@ -194,6 +235,27 @@ export default function GameBoard({
     powerType === 'black-king' && powerStep === 'swap' && pendingPower?.peekedPosition
       ? pendingPower.peekedPosition
       : null;
+
+  const blueSelectionSlots = useMemo(() => {
+    const out = [];
+    if (pendingPower?.type === 'queen' && pendingPower.queenAnchor) {
+      out.push({
+        playerId: pendingPower.queenAnchor.playerId,
+        index: pendingPower.queenAnchor.cardIndex,
+      });
+    }
+    if (
+      pendingPower?.type === 'black-king' &&
+      pendingPower.step === 'swap' &&
+      pendingPower.peekedPosition
+    ) {
+      out.push({
+        playerId: pendingPower.peekedPosition.playerId,
+        index: pendingPower.peekedPosition.cardIndex,
+      });
+    }
+    return out;
+  }, [pendingPower]);
 
   const checkNoticeText =
     checkCaller &&
@@ -224,9 +286,15 @@ export default function GameBoard({
               selectable={reactStealAllowed && !pendingStealGive}
               redKingBannerPick={redKingPicking}
               onRedKingSelect={redKingPicking ? (id) => onResolvePower({ targetPlayerId: id }) : undefined}
-              powerSlotHighlight={queenFirst}
+              emeraldPowerSlots={[]}
+              blueSelectSlots={blueSelectionSlots}
               blackKingPeekedSlot={blackPeeked}
-              size="sm"
+              slotPulses={tableFeedback.slotPulses}
+              pairSwap={tableFeedback.pairSwap}
+              drawHandSwap={tableFeedback.drawHandSwap}
+              optimisticPowerSecond={optimisticPowerSecond}
+              optimisticDrawHandIndex={null}
+              size={handSize}
             />
           ))}
         </div>
@@ -261,17 +329,31 @@ export default function GameBoard({
                 count={playPileCount}
                 canTakeFromPile={canTakeFromPile}
                 onTakeFromPile={canTakeFromPile ? () => onTakeFromPile?.() : undefined}
+                highlightCardId={tableFeedback.pileHighlightCardId}
+                reduceMotion={reduceMotion}
               />
 
               <AnimatePresence>
                 {drawnCard && canPlay && (
                   <motion.div
-                    initial={{ x: -50, opacity: 0 }}
+                    initial={reduceMotion ? false : { x: -50, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
-                    exit={{ x: 50, opacity: 0 }}
-                    className="flex flex-col items-center gap-2"
+                    exit={reduceMotion ? undefined : { x: 50, opacity: 0 }}
+                    className={`flex flex-col items-center gap-2 rounded-xl px-1 ${
+                      !(drawnCard && canPlay) && tableFeedback.holdingHighlight
+                        ? 'ring-2 ring-emerald-400/70 ring-offset-2 ring-offset-black/30'
+                        : ''
+                    }`}
                   >
-                    <Card card={drawnCard} faceUp size="md" highlight />
+                    <Card
+                      card={drawnCard}
+                      faceUp
+                      size={compactTable ? 'sm' : 'md'}
+                      drawHoldingAccent={!!drawnCard && canPlay}
+                      highlight={!(drawnCard && canPlay)}
+                      motionPreset="interactive"
+                      enableLayout={false}
+                    />
                     <span className="text-xs text-gray-400">Holding</span>
                   </motion.div>
                 )}
@@ -282,14 +364,14 @@ export default function GameBoard({
               <div className="flex flex-col gap-1.5 shrink-0 w-[5.25rem] self-center">
                 {showReactionControls && (
                   <>
-                    <div className="min-h-[2.5rem] flex">
+                    <div className="min-h-[44px] flex">
                       {reactArmed ? (
                         <button
                           type="button"
                           onClick={() => setReactArmed(false)}
                           title="Cancel react"
                           aria-label="Cancel react"
-                          className="w-full py-2 px-2 rounded-lg text-xs font-bold bg-gray-700/80 text-gray-200 border border-gray-500/40 hover:bg-gray-600"
+                          className="min-h-[44px] w-full py-2 px-2 rounded-lg text-xs font-bold bg-gray-700/80 text-gray-200 border border-gray-500/40 hover:bg-gray-600"
                         >
                           Cancel
                         </button>
@@ -299,20 +381,20 @@ export default function GameBoard({
                           onClick={() => setReactArmed(true)}
                           title="Arm react to match the pile"
                           aria-label="React to the play pile"
-                          className="w-full py-2 px-2 rounded-lg text-xs font-bold bg-amber-600/90 text-black border border-amber-400/50 hover:bg-amber-500 shadow-glow"
+                          className="min-h-[44px] w-full py-2 px-2 rounded-lg text-xs font-bold bg-amber-600/90 text-black border border-amber-400/50 hover:bg-amber-500 shadow-glow"
                         >
                           React
                         </button>
                       )}
                     </div>
-                    <div className="min-h-[2.5rem] flex">
+                    <div className="min-h-[44px] flex">
                       <button
                         type="button"
                         onClick={() => onStartQueuedPower?.()}
                         disabled={!canStartQueuedPower}
                         title="Resolve queued pile power"
                         aria-label="Resolve queued pile power"
-                        className={`w-full py-2 px-2 rounded-lg text-xs font-bold border ${
+                        className={`min-h-[44px] w-full py-2 px-2 rounded-lg text-xs font-bold border ${
                           canStartQueuedPower
                             ? 'bg-emerald-700/90 text-white border-emerald-500/50 hover:bg-emerald-600'
                             : 'bg-gray-800/50 text-gray-500 border-gray-600/30 cursor-not-allowed'
@@ -324,14 +406,14 @@ export default function GameBoard({
                   </>
                 )}
                 {showSharedPlayCheckSlot && (
-                  <div className="flex items-center justify-center min-h-[2.5rem]">
+                  <div className="flex items-center justify-center min-h-[44px]">
                     {canPlayDrawnToPile ? (
                       <button
                         type="button"
                         onClick={onPlayDrawnCard}
                         title="Play card to pile"
                         aria-label="Play card to pile"
-                        className="w-full py-2 px-2 rounded-lg text-xs font-bold btn-primary"
+                        className="min-h-[44px] w-full py-2 px-2 rounded-lg text-xs font-bold btn-primary"
                       >
                         Play
                       </button>
@@ -341,12 +423,12 @@ export default function GameBoard({
                         onClick={onCallCheck}
                         title="Call Check"
                         aria-label="Call Check"
-                        className="w-full py-2 px-2 rounded-lg text-xs font-bold bg-red-600/80 hover:bg-red-600 text-white border border-red-400/30"
+                        className="min-h-[44px] w-full py-2 px-2 rounded-lg text-xs font-bold bg-red-600/80 hover:bg-red-600 text-white border border-red-400/30"
                       >
                         Check
                       </button>
                     ) : (
-                      <div className="w-full min-h-[2.5rem]" aria-hidden />
+                      <div className="w-full min-h-[44px]" aria-hidden />
                     )}
                   </div>
                 )}
@@ -361,9 +443,9 @@ export default function GameBoard({
         <AnimatePresence mode="wait">
           <motion.div
             key={phaseLabel}
-            initial={{ opacity: 0, y: 5 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -5 }}
+            exit={reduceMotion ? undefined : { opacity: 0, y: -5 }}
             className="text-sm text-emerald-300/80 font-medium px-2"
           >
             {phaseLabel}
@@ -372,7 +454,10 @@ export default function GameBoard({
       </div>
 
       {/* My hand */}
-      <div className="flex-shrink-0 pb-4 pt-1 px-3 sm:px-4 flex justify-center">
+      <div
+        className="flex-shrink-0 pt-1 px-3 sm:px-4 flex justify-center
+          pb-[max(1rem,env(safe-area-inset-bottom))]"
+      >
         {me && (
           <PlayerHand
             player={me}
@@ -384,9 +469,15 @@ export default function GameBoard({
             selectedIndex={-1}
             redKingBannerPick={redKingPicking}
             onRedKingSelect={redKingPicking ? (id) => onResolvePower({ targetPlayerId: id }) : undefined}
-            powerSlotHighlight={queenFirst}
+            emeraldPowerSlots={[]}
+            blueSelectSlots={blueSelectionSlots}
             blackKingPeekedSlot={blackPeeked}
-            size="sm"
+            slotPulses={tableFeedback.slotPulses}
+            pairSwap={tableFeedback.pairSwap}
+            drawHandSwap={tableFeedback.drawHandSwap}
+            optimisticPowerSecond={optimisticPowerSecond}
+            optimisticDrawHandIndex={optimisticDrawSlot}
+            size={handSize}
           />
         )}
       </div>
@@ -405,7 +496,6 @@ function getPhaseLabel({
   reactArmed,
   isPowerController,
   pendingPower,
-  queenFirst,
   canStartQueuedPower,
   queuedPowerControllerName,
   drawnFromPlayPile,
@@ -419,10 +509,12 @@ function getPhaseLabel({
     switch (pendingPower.type) {
       case 'jack':
         return 'Jack — tap one of your face-down cards to peek';
-      case 'queen':
-        return queenFirst
+      case 'queen': {
+        const anchor = pendingPower?.queenAnchor;
+        return anchor
           ? 'Queen — tap a second card anywhere to swap with the first'
           : 'Queen — tap any face-down card as the first swap';
+      }
       case 'red-king':
         return 'Red King — tap a player name to give them a new card';
       case 'black-king':

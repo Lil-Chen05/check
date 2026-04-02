@@ -82,4 +82,62 @@
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
   }
+
+  /* Swap teaching: Queen / Black King — role A blue → red, role B red → blue */
+  .swap-ring-overlay {
+    pointer-events: none;
+    border-radius: 0.5rem;
+  }
+
+  .swap-anim-blue-to-red {
+    animation: swapBlueToRed 3s ease-in-out forwards;
+  }
+
+  .swap-anim-red-to-blue {
+    animation: swapRedToBlue 3s ease-in-out forwards;
+  }
+
+  /* Draw + hand swap — hand slot red → amber (drawn card landed) */
+  .swap-anim-red-to-amber {
+    animation: swapRedToAmber 3s ease-in-out forwards;
+  }
+}
+
+@keyframes swapBlueToRed {
+  0% {
+    box-shadow:
+      0 0 0 2px rgb(96 165 250),
+      0 0 14px rgba(96, 165, 250, 0.55);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px rgb(239 68 68),
+      0 0 12px rgba(239 68 68, 0.5);
+  }
+}
+
+@keyframes swapRedToBlue {
+  0% {
+    box-shadow:
+      0 0 0 2px rgb(239 68 68),
+      0 0 14px rgba(239, 68, 68, 0.55);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px rgb(96 165 250),
+      0 0 12px rgba(96, 165, 250, 0.5);
+  }
+}
+
+@keyframes swapRedToAmber {
+  0% {
+    box-shadow:
+      0 0 0 2px rgb(239 68 68),
+      0 0 14px rgba(239, 68, 68, 0.55);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px rgb(251 191 36),
+      0 0 12px rgba(251, 191, 36, 0.45);
+  }
 }

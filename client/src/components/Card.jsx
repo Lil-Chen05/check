@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { getSuitSymbol, getSuitColor, getDisplayRank } from '../utils/cardUtils';
 
 export default function Card({
@@ -7,33 +8,68 @@ export default function Card({
   onClick,
   disabled = false,
   highlight = false,
+  /** Match Resolve button: shared power / peek teaching cue */
+  powerEmeraldHighlight = false,
+  /** Drawn card in holding area — amber / yellow ring */
+  drawHoldingAccent = false,
   size = 'md',
   className = '',
+  /** FLIP layout (use sparingly — e.g. pile). Default off to reduce main-thread work on hands. */
+  enableLayout = false,
+  /** interactive: enter/exit motion. static: no mount choreography (table hands). */
+  motionPreset = 'interactive',
 }) {
   const showFace = faceUp && card?.rank;
   const isJoker = card?.rank === 'Joker';
+  const reduceMotion = useReducedMotion();
+  const [finePointer, setFinePointer] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const mq = window.matchMedia('(hover: hover) and (pointer: fine)');
+    setFinePointer(mq.matches);
+    const fn = () => setFinePointer(mq.matches);
+    mq.addEventListener('change', fn);
+    return () => mq.removeEventListener('change', fn);
+  }, []);
 
   const sizes = {
+    xs: 'w-[46px] h-[66px] text-[10px]',
     sm: 'w-[52px] h-[74px] text-xs',
     md: 'w-[70px] h-[100px] text-sm',
     lg: 'w-[90px] h-[128px] text-base',
   };
 
+  const layoutOn = enableLayout && !reduceMotion;
+  const showEnterExit = motionPreset === 'interactive' && !reduceMotion;
+  const hoverMotion =
+    finePointer && !reduceMotion && !disabled && onClick
+      ? { y: -4, scale: 1.03 }
+      : undefined;
+
   return (
     <motion.div
-      layout
-      initial={{ scale: 0.8, opacity: 0 }}
+      layout={layoutOn}
+      initial={showEnterExit ? { scale: 0.92, opacity: 0.85 } : false}
       animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0.8, opacity: 0 }}
-      whileHover={!disabled && onClick ? { y: -6, scale: 1.05 } : {}}
-      whileTap={!disabled && onClick ? { scale: 0.95 } : {}}
+      exit={showEnterExit ? { scale: 0.92, opacity: 0 } : undefined}
+      transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+      whileHover={hoverMotion}
+      whileTap={!disabled && onClick ? { scale: 0.97 } : undefined}
       onClick={!disabled ? onClick : undefined}
       className={`
         relative rounded-lg shadow-card select-none flex-shrink-0
-        ${sizes[size]}
+        ${sizes[size] || sizes.md}
         ${onClick && !disabled ? 'cursor-pointer' : ''}
-        ${disabled ? 'opacity-60' : ''}
-        ${highlight ? 'ring-2 ring-gold-400 shadow-glow' : ''}
+        ${disabled ? 'cursor-not-allowed' : ''}
+        ${disabled && !powerEmeraldHighlight ? 'opacity-60' : ''}
+        ${drawHoldingAccent
+          ? 'ring-2 ring-amber-400/90 shadow-[0_0_14px_rgba(251,191,36,0.45)]'
+          : powerEmeraldHighlight
+            ? 'ring-2 ring-emerald-400/90 shadow-[0_0_16px_rgba(52,211,153,0.5)]'
+            : highlight
+              ? 'ring-2 ring-gold-400 shadow-glow'
+              : ''}
         ${className}
       `}
     >

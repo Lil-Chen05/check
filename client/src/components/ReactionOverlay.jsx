@@ -61,7 +61,7 @@ export default function ReactionOverlay({ reactionWindow, lastResult, cardReveal
                     <span className="text-[10px] text-gold-500/80 uppercase tracking-wide">
                       {ROLE_LABEL[c.role] || 'Card'}
                     </span>
-                    <Card card={c} faceUp size="lg" />
+                    <Card card={c} faceUp size="lg" motionPreset="static" enableLayout={false} />
                   </div>
                 ))}
               </div>

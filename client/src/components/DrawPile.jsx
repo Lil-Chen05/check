@@ -1,9 +1,12 @@
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 export default function DrawPile({ count, onClick, disabled, canDraw }) {
+  const reduceMotion = useReducedMotion();
+  const canHover = canDraw && !disabled && !reduceMotion;
+
   return (
     <motion.div
-      whileHover={canDraw && !disabled ? { scale: 1.05 } : {}}
+      whileHover={canHover ? { scale: 1.05 } : {}}
       whileTap={canDraw && !disabled ? { scale: 0.95 } : {}}
       onClick={canDraw && !disabled ? onClick : undefined}
       className={`relative flex flex-col items-center gap-2 ${

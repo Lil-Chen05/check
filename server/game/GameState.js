@@ -136,6 +136,7 @@ export default class GameState {
     this.drawnCard = this.drawDeck.pop();
     this.drawnFromPlayPile = false;
     this.phase = 'turn-action';
+    this.lastEvent = { type: 'card-drawn', playerId };
 
     return {
       success: true,
@@ -211,6 +212,7 @@ export default class GameState {
     if (handIndex < 0 || handIndex >= player.hand.length) return { error: 'Invalid hand index' };
 
     const displaced = player.hand[handIndex];
+    const incomingCardId = this.drawnCard.id;
     player.hand[handIndex] = this.drawnCard;
     this.drawnCard = null;
     this.drawnFromPlayPile = false;
@@ -224,7 +226,13 @@ export default class GameState {
       });
     }
 
-    this.lastEvent = { type: 'card-swapped', card: displaced, playerId, handIndex };
+    this.lastEvent = {
+      type: 'card-swapped',
+      card: displaced,
+      playerId,
+      handIndex,
+      incomingCardId,
+    };
 
     return {
       success: true,
@@ -241,7 +249,11 @@ export default class GameState {
     }
 
     const power = this.powerQueue.shift();
-    this.pendingPower = { ...power, step: power.type === 'black-king' ? 'peek' : 'resolve' };
+    this.pendingPower = {
+      ...power,
+      step: power.type === 'black-king' ? 'peek' : 'resolve',
+      queenAnchor: null,
+    };
     this.phase = 'power-resolve';
     return this.pendingPower;
   }
@@ -257,13 +269,65 @@ export default class GameState {
     switch (type) {
       case 'jack':
         result = PowerCards.resolveJack(this, playerId, data.cardIndex);
-        if (result.success) this.pendingPower = null;
+        if (result.success) {
+          this.lastEvent = {
+            type: 'jack-peek',
+            playerId,
+            cardIndex: data.cardIndex,
+          };
+          this.pendingPower = null;
+        }
         break;
 
-      case 'queen':
-        result = PowerCards.resolveQueen(this, playerId, data.pos1, data.pos2);
-        if (result.success) this.pendingPower = null;
+      case 'queen': {
+        if (data.pos2 != null && typeof data.pos2 === 'object') {
+          const anchor = this.pendingPower.queenAnchor;
+          if (
+            !anchor ||
+            typeof anchor.playerId !== 'string' ||
+            typeof anchor.cardIndex !== 'number'
+          ) {
+            return { error: 'Select the first card before the second' };
+          }
+          const pos1 = {
+            playerId: anchor.playerId,
+            cardIndex: anchor.cardIndex,
+          };
+          const pos2 = {
+            playerId: data.pos2.playerId,
+            cardIndex: data.pos2.cardIndex,
+          };
+          result = PowerCards.resolveQueen(this, playerId, anchor, data.pos2);
+          if (result.success) {
+            this.lastEvent = {
+              type: 'queen-swapped',
+              playerId,
+              pos1,
+              pos2,
+            };
+            this.pendingPower = null;
+          }
+        } else if (data.pos1 != null && typeof data.pos1 === 'object') {
+          const a = {
+            playerId: data.pos1.playerId,
+            cardIndex: data.pos1.cardIndex,
+          };
+          const anchor = this.pendingPower.queenAnchor;
+          if (
+            anchor &&
+            anchor.playerId === a.playerId &&
+            anchor.cardIndex === a.cardIndex
+          ) {
+            this.pendingPower.queenAnchor = null;
+          } else {
+            this.pendingPower.queenAnchor = a;
+          }
+          result = { success: true };
+        } else {
+          return { error: 'Invalid queen resolution data' };
+        }
         break;
+      }
 
       case 'red-king':
         result = PowerCards.resolveRedKing(this, playerId, data.targetPlayerId);
@@ -281,12 +345,28 @@ export default class GameState {
             };
           }
         } else {
+          const fromPos = {
+            playerId: this.pendingPower.peekedPosition.playerId,
+            cardIndex: this.pendingPower.peekedPosition.cardIndex,
+          };
+          const toPos = {
+            playerId: data.toPos.playerId,
+            cardIndex: data.toPos.cardIndex,
+          };
           result = PowerCards.resolveBlackKingSwap(
             this, playerId,
             this.pendingPower.peekedPosition,
             data.toPos,
           );
-          if (result.success) this.pendingPower = null;
+          if (result.success) {
+            this.lastEvent = {
+              type: 'black-king-swapped',
+              playerId,
+              fromPos,
+              toPos,
+            };
+            this.pendingPower = null;
+          }
         }
         break;
 
@@ -374,6 +454,83 @@ export default class GameState {
   }
 
   // ── State Filtering ─────────────────────────────
+
+  /**
+   * Stable, minimal DTO for UI motion / teaching cues (no full card payloads).
+   * @param {object|null} raw
+   * @returns {object|null}
+   */
+  static buildLastEventFeedback(raw) {
+    if (!raw || typeof raw.type !== 'string') return null;
+    const v = 2;
+    switch (raw.type) {
+      case 'card-played':
+        return {
+          v,
+          kind: 'played',
+          actorId: raw.playerId,
+          cardId: raw.card?.id ?? null,
+        };
+      case 'card-swapped':
+        return {
+          v,
+          kind: 'drawHandSwap',
+          actorId: raw.playerId,
+          cardId: raw.card?.id ?? null,
+          slotIndex: raw.handIndex ?? null,
+          incomingCardId: raw.incomingCardId ?? null,
+        };
+      case 'queen-swapped':
+        return {
+          v,
+          kind: 'powerPairSwap',
+          roleA: {
+            playerId: raw.pos1?.playerId ?? null,
+            slotIndex: raw.pos1?.cardIndex ?? null,
+          },
+          roleB: {
+            playerId: raw.pos2?.playerId ?? null,
+            slotIndex: raw.pos2?.cardIndex ?? null,
+          },
+        };
+      case 'black-king-swapped':
+        return {
+          v,
+          kind: 'powerPairSwap',
+          roleA: {
+            playerId: raw.fromPos?.playerId ?? null,
+            slotIndex: raw.fromPos?.cardIndex ?? null,
+          },
+          roleB: {
+            playerId: raw.toPos?.playerId ?? null,
+            slotIndex: raw.toPos?.cardIndex ?? null,
+          },
+        };
+      case 'card-taken-from-pile':
+        return {
+          v,
+          kind: 'takenFromPile',
+          actorId: raw.playerId,
+          cardId: raw.card?.id ?? null,
+        };
+      case 'card-drawn':
+        return {
+          v,
+          kind: 'drawn',
+          actorId: raw.playerId,
+        };
+      case 'jack-peek':
+        return {
+          v,
+          kind: 'jackPeek',
+          actorId: raw.playerId,
+          slotIndex: raw.cardIndex ?? null,
+        };
+      default:
+        return null;
+    }
+  }
+
   getFilteredState(playerId) {
     const viewer = this.getPlayer(playerId);
     const isActivePlayer = this.currentPlayer()?.id === playerId;
@@ -434,9 +591,8 @@ export default class GameState {
           controllerId: this.pendingPower.controllerId,
           step: this.pendingPower.step,
           isMyPower: this.pendingPower.controllerId === playerId,
-          peekedPosition: this.pendingPower.controllerId === playerId
-            ? this.pendingPower.peekedPosition
-            : undefined,
+          queenAnchor: this.pendingPower.queenAnchor ?? null,
+          peekedPosition: this.pendingPower.peekedPosition ?? null,
         }
         : null,
 
@@ -447,7 +603,7 @@ export default class GameState {
         ? (queuedPowerController?.displayName ?? 'Player')
         : null,
 
-      lastEvent: this.lastEvent,
+      lastEventFeedback: GameState.buildLastEventFeedback(this.lastEvent),
     };
   }
 }

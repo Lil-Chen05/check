@@ -1,8 +1,9 @@
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, LayoutGroup } from 'framer-motion';
 import Card from './Card';
 
 function slotBoxClass(size) {
   if (size === 'lg') return 'w-[90px] h-[128px]';
+  if (size === 'xs') return 'w-[46px] h-[66px]';
   if (size === 'sm') return 'w-[52px] h-[74px]';
   return 'w-[70px] h-[100px]';
 }
@@ -19,18 +20,31 @@ export default function PlayerHand({
   /** Red King: tap the name row to choose this player */
   redKingBannerPick = false,
   onRedKingSelect,
-  /** Highlight one slot (e.g. Queen first pick) */
-  powerSlotHighlight = null,
+  /** Jack peek pulse (emerald) via table feedback */
+  emeraldPowerSlots = [],
+  /** Queen anchor + Black King peeked slot — blue ring while choosing */
+  blueSelectSlots = [],
   /** Black King swap: slot that cannot be chosen as swap target */
   blackKingPeekedSlot = null,
+  /** Slots to pulse from lastEventFeedback (memory / teaching) */
+  slotPulses = [],
+  /** Post-swap: two slots, blue↔red crossfade */
+  pairSwap = null,
+  /** Draw swap: hand slot red → amber */
+  drawHandSwap = null,
+  /** Controller second pick (queen / black king) — red ring */
+  optimisticPowerSecond = null,
+  /** My hand: index highlighted red before draw swap resolves */
+  optimisticDrawHandIndex = null,
 }) {
   const cards = player.hand || [];
   const box = slotBoxClass(size);
-  const cardSize = size === 'lg' ? 'lg' : size === 'sm' ? 'sm' : 'md';
-  const gap = size === 'sm' ? 'gap-1.5' : 'gap-2';
+  const cardSize = size === 'lg' ? 'lg' : size === 'sm' ? 'sm' : size === 'xs' ? 'xs' : 'md';
+  const gap = size === 'xs' ? 'gap-1' : size === 'sm' ? 'gap-1.5' : 'gap-2';
 
   const isPeekedHere =
     blackKingPeekedSlot?.playerId === player.id && blackKingPeekedSlot != null;
+
 
   const placeholderCount = cards.length < 7 ? 7 - cards.length : 0;
 
@@ -58,57 +72,138 @@ export default function PlayerHand({
           type="button"
           onClick={() => onRedKingSelect(player.id)}
           className="flex items-center gap-1.5 mb-1 px-2 py-1 rounded-lg border border-gold-600/30 bg-black/20
-                     hover:border-amber-400/60 hover:bg-black/40 transition-all cursor-pointer"
+                     hover:border-amber-400/60 hover:bg-black/40 transition-all cursor-pointer min-h-[44px]"
         >
           {headerInner}
         </button>
       ) : (
-        <div className="flex items-center gap-1.5 mb-1">
+        <div className="flex items-center gap-1.5 mb-1 min-h-[44px]">
           {headerInner}
         </div>
       )}
 
-      <div
-        className={`flex flex-row items-end ${gap} rounded-xl border border-white/10 bg-black/10 px-2 py-2`}
-      >
-        <AnimatePresence mode="popLayout">
-          {cards.map((card, index) => {
-            const isPeekedCard = isPeekedHere && blackKingPeekedSlot.cardIndex === index;
-            const powerHL =
-              powerSlotHighlight?.playerId === player.id && powerSlotHighlight?.cardIndex === index;
-            return (
-              <div key={card.id} className="flex flex-col items-center gap-0.5 shrink-0">
-                <Card
-                  card={card}
-                  faceUp={false}
-                  size={cardSize}
-                  onClick={onCardClick ? () => onCardClick(player.id, index, card) : undefined}
-                  highlight={
-                    selectedIndex === index ||
-                    (reactionActive && (isMe || selectable)) ||
-                    powerHL
-                  }
-                  disabled={!onCardClick || isPeekedCard}
-                />
-                <span className="text-[9px] text-gray-500 tabular-nums leading-none">{index + 1}</span>
-              </div>
-            );
-          })}
-        </AnimatePresence>
+      <LayoutGroup id={`hand-${player.id}`}>
+        <div
+          className={`flex flex-row items-end ${gap} rounded-xl border border-white/10 bg-black/10 px-2 py-2`}
+        >
+          <AnimatePresence mode="popLayout">
+            {cards.map((card, index) => {
+              const isPeekedCard = isPeekedHere && blackKingPeekedSlot.cardIndex === index;
+              const pulseEntry = slotPulses.find(
+                (sp) => sp.playerId === player.id && sp.index === index,
+              );
+              const slotPulseAmber = pulseEntry && pulseEntry.tone !== 'emerald';
+              const slotPulseEmerald = pulseEntry?.tone === 'emerald';
+              const emeraldPower = emeraldPowerSlots.some(
+                (s) => s.playerId === player.id && s.index === index,
+              );
+              const powerEmerald = emeraldPower || slotPulseEmerald;
 
-        {placeholderCount > 0 &&
-          Array.from({ length: placeholderCount }, (_, i) => {
-            const slotNum = cards.length + i + 1;
-            return (
-              <div key={`slot-${slotNum}`} className="flex flex-col items-center gap-0.5 shrink-0">
+              let swapOverlayClass = '';
+              if (pairSwap) {
+                if (pairSwap.a.playerId === player.id && pairSwap.a.index === index) {
+                  swapOverlayClass = 'swap-ring-overlay swap-anim-blue-to-red';
+                } else if (pairSwap.b.playerId === player.id && pairSwap.b.index === index) {
+                  swapOverlayClass = 'swap-ring-overlay swap-anim-red-to-blue';
+                }
+              }
+              if (!swapOverlayClass && drawHandSwap) {
+                if (drawHandSwap.playerId === player.id && drawHandSwap.index === index) {
+                  swapOverlayClass = 'swap-ring-overlay swap-anim-red-to-amber';
+                }
+              }
+
+              const optPowerRed =
+                optimisticPowerSecond &&
+                optimisticPowerSecond.playerId === player.id &&
+                optimisticPowerSecond.index === index;
+
+              const optDrawRed =
+                isMe &&
+                optimisticDrawHandIndex != null &&
+                optimisticDrawHandIndex === index;
+
+              const selectBlue =
+                !swapOverlayClass &&
+                !optPowerRed &&
+                !optDrawRed &&
+                blueSelectSlots.some((s) => s.playerId === player.id && s.index === index);
+
+              const staticOverlayClass = (() => {
+                if (swapOverlayClass) return '';
+                if (optPowerRed || optDrawRed) {
+                  return 'ring-2 ring-red-500 shadow-[0_0_12px_rgba(239,68,68,0.45)]';
+                }
+                if (selectBlue) {
+                  return 'ring-2 ring-blue-400 shadow-[0_0_12px_rgba(96,165,250,0.45)]';
+                }
+                return '';
+              })();
+
+              return (
                 <div
-                  className={`${box} rounded-lg border border-dashed border-white/12 bg-black/5 flex items-center justify-center`}
-                />
-                <span className="text-[9px] text-gold-600/35 tabular-nums leading-none">{slotNum}</span>
-              </div>
-            );
-          })}
-      </div>
+                  key={card.id}
+                  className={`flex flex-col items-center gap-0.5 shrink-0 rounded-md transition-shadow duration-300 ${
+                    slotPulseAmber
+                      ? 'ring-2 ring-amber-400/90 ring-offset-2 ring-offset-black/40 shadow-[0_0_12px_rgba(251,191,36,0.45)]'
+                      : ''
+                  }`}
+                >
+                  <div className="relative inline-flex shrink-0 rounded-lg">
+                    {swapOverlayClass ? (
+                      <div
+                        className={`absolute inset-0 z-[2] rounded-lg ${swapOverlayClass}`}
+                        aria-hidden
+                      />
+                    ) : staticOverlayClass ? (
+                      <div
+                        className={`pointer-events-none absolute inset-0 z-[2] rounded-lg ${staticOverlayClass}`}
+                        aria-hidden
+                      />
+                    ) : null}
+                    <Card
+                      card={card}
+                      faceUp={false}
+                      size={cardSize}
+                      motionPreset="static"
+                      enableLayout={false}
+                      onClick={onCardClick ? () => onCardClick(player.id, index, card) : undefined}
+                      powerEmeraldHighlight={
+                        !swapOverlayClass &&
+                        !selectBlue &&
+                        !optPowerRed &&
+                        !optDrawRed &&
+                        powerEmerald
+                      }
+                      highlight={
+                        !swapOverlayClass &&
+                        !staticOverlayClass &&
+                        !powerEmerald &&
+                        (selectedIndex === index || (reactionActive && (isMe || selectable)))
+                      }
+                      disabled={!onCardClick || isPeekedCard}
+                    />
+                  </div>
+                  <span className="text-[9px] text-gray-500 tabular-nums leading-none">{index + 1}</span>
+                </div>
+              );
+            })}
+          </AnimatePresence>
+
+          {placeholderCount > 0 &&
+            Array.from({ length: placeholderCount }, (_, i) => {
+              const slotNum = cards.length + i + 1;
+              return (
+                <div key={`slot-${slotNum}`} className="flex flex-col items-center gap-0.5 shrink-0">
+                  <div
+                    className={`${box} rounded-lg border border-dashed border-white/12 bg-black/5 flex items-center justify-center`}
+                  />
+                  <span className="text-[9px] text-gold-600/35 tabular-nums leading-none">{slotNum}</span>
+                </div>
+              );
+            })}
+        </div>
+      </LayoutGroup>
     </div>
   );
 }

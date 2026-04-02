@@ -66,7 +66,7 @@ export default function ScoreBoard({ scores, myId, onReturnToLobby }) {
                       animate={{ rotateY: 0 }}
                       transition={{ delay: 0.1 * ci + 0.3 * idx + 0.8 }}
                     >
-                      <Card card={card} faceUp size="sm" />
+                      <Card card={card} faceUp size="sm" motionPreset="static" enableLayout={false} />
                     </motion.div>
                   ))}
                   {player.hand.length === 0 && (

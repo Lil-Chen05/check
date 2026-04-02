@@ -6,6 +6,7 @@ import { useGameState } from '../hooks/useGameState';
 import GameBoard from '../components/GameBoard';
 import ReactionOverlay from '../components/ReactionOverlay';
 import ScoreBoard from '../components/ScoreBoard';
+import { useTableFeedback } from '../hooks/useTableFeedback';
 
 export default function GamePage() {
   const { roomCode } = useParams();
@@ -30,6 +31,8 @@ export default function GamePage() {
     gameOver,
     lastCardPlayed,
   } = useGameState(null, on);
+
+  const tableFeedback = useTableFeedback(gameState);
 
   const [peekedCard, setPeekedCard] = useState(null);
   const [actionError, setActionError] = useState('');
@@ -166,6 +169,7 @@ export default function GamePage() {
         gameState={gameState}
         reactionWindow={reactionWindow}
         checkCallInfo={checkCallInfo}
+        tableFeedback={tableFeedback}
         onDrawCard={handleDrawCard}
         onTakeFromPile={handleTakeFromPile}
         onPlayDrawnCard={handlePlayDrawnCard}
