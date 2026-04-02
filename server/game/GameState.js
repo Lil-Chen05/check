@@ -110,7 +110,9 @@ export default class GameState {
 
   // ── Turn Actions ────────────────────────────────
   callCheck(playerId) {
+    if (this.phase === 'power-resolve') return { error: 'Finish resolving the power first' };
     if (this.phase !== 'turn-draw') return { error: 'Not in draw phase' };
+    if (this.hasUnresolvedQueuedPower()) return { error: GameState.QUEUED_POWER_WAIT_ERROR };
     if (this.currentPlayer().id !== playerId) return { error: 'Not your turn' };
     if (this.checkCaller !== null) return { error: 'Check already called' };
 

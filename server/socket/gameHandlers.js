@@ -116,7 +116,6 @@ export default function gameHandlers(io, socket, rooms) {
     if (!started) {
       return callback?.({ error: 'Could not start power' });
     }
-    gameState.suppressNextFinishTurn = true;
 
     callback?.({ success: true });
     broadcastGameState(io, room);
@@ -236,6 +235,12 @@ function beginOrDeferPostPlayReaction(io, room, gameState, queuedBeforePlay) {
     }
   }
   startReactionWindow(io, room, gameState);
+  // Power on the pile is queued but not resolving yet — keep turn on the player who played it until powers finish.
+  if (gameState.powerQueue.length > 0 && !gameState.pendingPower) {
+    gameState.drawnCard = null;
+    gameState.phase = 'turn-draw';
+    return;
+  }
   finishTurn(io, room, gameState);
   gameState.alreadyAdvancedForPendingReaction = true;
 }

@@ -63,7 +63,8 @@ export default function GameBoard({
   const canDraw = isMyTurn && phase === 'turn-draw';
   const canPlay = isMyTurn && phase === 'turn-action' && drawnCard;
   const canPeek = phase === 'setup-peek' && me && !me.hasPeeked;
-  const canCheck = isMyTurn && phase === 'turn-draw' && !checkCaller;
+  const canCheck =
+    isMyTurn && phase === 'turn-draw' && !checkCaller && !queuedPowerControllerName;
 
   const redKingPicking = isPowerController && powerType === 'red-king';
 
@@ -241,7 +242,7 @@ export default function GameBoard({
           </AnimatePresence>
         </div>
 
-        {/* Phase indicator & Check button */}
+        {/* Phase indicator */}
         <div className="flex-shrink-0 text-center py-2">
           <AnimatePresence mode="wait">
             <motion.div
@@ -254,19 +255,6 @@ export default function GameBoard({
               {phaseLabel}
             </motion.div>
           </AnimatePresence>
-
-          {canCheck && (
-            <motion.button
-              type="button"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              onClick={onCallCheck}
-              className="mt-2 px-6 py-2 bg-red-600/80 hover:bg-red-600 text-white font-bold
-                         rounded-lg shadow-lg transition-all text-sm border border-red-400/30"
-            >
-              Call Check!
-            </motion.button>
-          )}
         </div>
 
         {/* My hand */}
@@ -290,49 +278,71 @@ export default function GameBoard({
         </div>
       </div>
 
-      {/* React sidebar — only you arm; does not block others */}
-      {reactionOpen && !pendingStealGive && (
-        <div className="flex-shrink-0 w-[88px] border-l border-gold-600/15 bg-black/20 flex flex-col items-center py-4 px-2 gap-2">
+      {/* Pile / turn actions: React, Resolve, Call Check */}
+      {!pendingStealGive && (reactionOpen || canCheck) && (
+        <div className="flex-shrink-0 w-[92px] border-l border-gold-600/15 bg-black/20 flex flex-col items-center py-4 px-2 gap-2">
           <span className="text-[10px] text-gray-500 uppercase tracking-wide text-center leading-tight">
-            Pile
+            {reactionOpen ? 'Pile' : 'Turn'}
           </span>
-          {reactArmed ? (
+          {reactionOpen && (
+            <>
+              {reactArmed ? (
+                <button
+                  type="button"
+                  onClick={() => setReactArmed(false)}
+                  className="w-full py-2 px-1 rounded-lg text-xs font-bold bg-gray-700/80 text-gray-200 border border-gray-500/40 hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setReactArmed(true)}
+                  className="w-full py-2 px-1 rounded-lg text-xs font-bold bg-amber-600/90 text-black border border-amber-400/50 hover:bg-amber-500 shadow-glow"
+                >
+                  React
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => onStartQueuedPower?.()}
+                disabled={!canStartQueuedPower}
+                className={`w-full py-2 px-1 rounded-lg text-xs font-bold border mt-1 ${
+                  canStartQueuedPower
+                    ? 'bg-emerald-700/90 text-white border-emerald-500/50 hover:bg-emerald-600'
+                    : 'bg-gray-800/50 text-gray-500 border-gray-600/30 cursor-not-allowed'
+                }`}
+              >
+                Resolve
+              </button>
+              {canCheck && (
+                <button
+                  type="button"
+                  onClick={onCallCheck}
+                  className="w-full py-2 px-1 rounded-lg text-[10px] font-bold leading-tight bg-red-600/80 hover:bg-red-600 text-white border border-red-400/30 mt-1"
+                >
+                  Call Check!
+                </button>
+              )}
+              <p className="text-[9px] text-gray-600 text-center leading-tight mt-1">
+                {canStartQueuedPower
+                  ? 'Start resolving the power you played'
+                  : "Only the pile power's controller can tap Resolve"}
+              </p>
+              <p className="text-[9px] text-gray-600 text-center leading-tight">
+                Arm React, then tap a card
+              </p>
+            </>
+          )}
+          {canCheck && !reactionOpen && (
             <button
               type="button"
-              onClick={() => setReactArmed(false)}
-              className="w-full py-2 px-1 rounded-lg text-xs font-bold bg-gray-700/80 text-gray-200 border border-gray-500/40 hover:bg-gray-600"
+              onClick={onCallCheck}
+              className="w-full py-2 px-1 rounded-lg text-[10px] font-bold leading-tight bg-red-600/80 hover:bg-red-600 text-white border border-red-400/30"
             >
-              Cancel
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setReactArmed(true)}
-              className="w-full py-2 px-1 rounded-lg text-xs font-bold bg-amber-600/90 text-black border border-amber-400/50 hover:bg-amber-500 shadow-glow"
-            >
-              React
+              Call Check!
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => onStartQueuedPower?.()}
-            disabled={!canStartQueuedPower}
-            className={`w-full py-2 px-1 rounded-lg text-xs font-bold border mt-1 ${
-              canStartQueuedPower
-                ? 'bg-emerald-700/90 text-white border-emerald-500/50 hover:bg-emerald-600'
-                : 'bg-gray-800/50 text-gray-500 border-gray-600/30 cursor-not-allowed'
-            }`}
-          >
-            Resolve
-          </button>
-          <p className="text-[9px] text-gray-600 text-center leading-tight mt-1">
-            {canStartQueuedPower
-              ? 'Start resolving the power you played'
-              : 'Only the pile power’s controller can tap Resolve'}
-          </p>
-          <p className="text-[9px] text-gray-600 text-center leading-tight">
-            Arm React, then tap a card
-          </p>
         </div>
       )}
     </div>
