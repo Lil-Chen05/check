@@ -30,7 +30,7 @@ export function useGameState(socket, on) {
         setReactionWindow({
           active: true,
           cardOnPile: data.cardOnPile,
-          duration: data.duration,
+          duration: data.duration == null ? null : data.duration,
           startTime: Date.now(),
         });
       }),

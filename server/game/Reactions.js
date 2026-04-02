@@ -1,15 +1,17 @@
 import { getEffectiveRank, isPowerCard, getPowerType } from './Deck.js';
 
-const REACTION_WINDOW_MS = 2500;
-
 /** Full rank/suit for everyone to see during reaction reveal (3s on client). */
 export function publicCard(card) {
   if (!card) return null;
   return { id: card.id, rank: card.rank, suit: card.suit };
 }
 
+/**
+ * Opens an untimed reaction window: anyone may react until the next player plays to the pile.
+ * @returns {{ opened: true }} | {{ opened: false }} (false = skip opening, e.g. chained reaction)
+ */
 export function openWindow(gameState, cardOnPile, playedBy, isFromReaction = false) {
-  if (isFromReaction) return;
+  if (isFromReaction) return { opened: false };
 
   gameState.reactionWindow = {
     active: true,
@@ -21,7 +23,7 @@ export function openWindow(gameState, cardOnPile, playedBy, isFromReaction = fal
     windowStart: Date.now(),
   };
 
-  return REACTION_WINDOW_MS;
+  return { opened: true };
 }
 
 export function handleOwnCardReaction(gameState, reactorId, cardIndex) {

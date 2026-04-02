@@ -37,6 +37,18 @@ export default class GameState {
     this.lastEvent = null;
     /** After a successful blind steal: reactor must pick a card to give the victim. */
     this.stealGivePending = null;
+    /**
+     * After a play opens a reaction window we immediately advance turn so the next player can act;
+     * a successful reaction must not advance again (would skip that player's turn).
+     */
+    this.alreadyAdvancedForPendingReaction = false;
+    /** When set, the next power-chain completion must not call finishTurn (turn already advanced). */
+    this.suppressNextFinishTurn = false;
+    /**
+     * After play/swap to pile: powers were drained before opening reaction + advancing turn.
+     * When the queue is finally empty, open reaction for the new top card and finishTurn.
+     */
+    this.deferReactionAndTurnAfterPowers = false;
   }
 
   initGame() {
@@ -87,6 +99,15 @@ export default class GameState {
     };
   }
 
+  /** Powers are queued on the pile but not yet in pendingPower — turn actions wait until the controller starts resolving. */
+  hasUnresolvedQueuedPower() {
+    return this.powerQueue.length > 0 && !this.pendingPower;
+  }
+
+  static get QUEUED_POWER_WAIT_ERROR() {
+    return 'Waiting for the power on the pile to be resolved';
+  }
+
   // ── Turn Actions ────────────────────────────────
   callCheck(playerId) {
     if (this.phase !== 'turn-draw') return { error: 'Not in draw phase' };
@@ -103,6 +124,7 @@ export default class GameState {
   drawCard(playerId) {
     if (this.phase !== 'turn-draw') return { error: 'Not in draw phase' };
     if (this.currentPlayer().id !== playerId) return { error: 'Not your turn' };
+    if (this.hasUnresolvedQueuedPower()) return { error: GameState.QUEUED_POWER_WAIT_ERROR };
 
     this.ensureDrawDeck();
     if (this.drawDeck.length === 0) return { error: 'No cards available' };
@@ -119,6 +141,7 @@ export default class GameState {
   playDrawnCard(playerId) {
     if (this.phase !== 'turn-action') return { error: 'Not in action phase' };
     if (this.currentPlayer().id !== playerId) return { error: 'Not your turn' };
+    if (this.hasUnresolvedQueuedPower()) return { error: GameState.QUEUED_POWER_WAIT_ERROR };
     if (!this.drawnCard) return { error: 'No drawn card' };
 
     const card = this.drawnCard;
@@ -133,7 +156,6 @@ export default class GameState {
       });
     }
 
-    this.phase = 'reaction-window';
     this.lastEvent = { type: 'card-played', card, playerId };
 
     return {
@@ -146,6 +168,7 @@ export default class GameState {
   swapCard(playerId, handIndex) {
     if (this.phase !== 'turn-action') return { error: 'Not in action phase' };
     if (this.currentPlayer().id !== playerId) return { error: 'Not your turn' };
+    if (this.hasUnresolvedQueuedPower()) return { error: GameState.QUEUED_POWER_WAIT_ERROR };
     if (!this.drawnCard) return { error: 'No drawn card' };
 
     const player = this.getPlayer(playerId);
@@ -165,7 +188,6 @@ export default class GameState {
       });
     }
 
-    this.phase = 'reaction-window';
     this.lastEvent = { type: 'card-swapped', card: displaced, playerId, handIndex };
 
     return {
@@ -318,6 +340,11 @@ export default class GameState {
   getFilteredState(playerId) {
     const viewer = this.getPlayer(playerId);
     const isActivePlayer = this.currentPlayer()?.id === playerId;
+    const waitingOnQueuedPower = this.hasUnresolvedQueuedPower();
+    const queueHead = waitingOnQueuedPower ? this.powerQueue[0] : null;
+    const queuedPowerController = queueHead
+      ? this.getPlayer(queueHead.controllerId)
+      : null;
 
     return {
       roomId: this.roomId,
@@ -373,6 +400,13 @@ export default class GameState {
             ? this.pendingPower.peekedPosition
             : undefined,
         }
+        : null,
+
+      canStartQueuedPower:
+        waitingOnQueuedPower && queueHead.controllerId === playerId,
+      queuedPowerControllerId: waitingOnQueuedPower ? queueHead.controllerId : null,
+      queuedPowerControllerName: waitingOnQueuedPower
+        ? (queuedPowerController?.displayName ?? 'Player')
         : null,
 
       lastEvent: this.lastEvent,

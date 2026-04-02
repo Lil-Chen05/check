@@ -13,12 +13,12 @@ export default function ReactionOverlay({ reactionWindow, lastResult, cardReveal
   const [timeLeft, setTimeLeft] = useState(0);
 
   useEffect(() => {
-    if (!reactionWindow?.active) {
+    if (!reactionWindow?.active || reactionWindow.duration == null) {
       setTimeLeft(0);
       return;
     }
 
-    const duration = reactionWindow.duration || 2500;
+    const duration = reactionWindow.duration;
     const startTime = reactionWindow.startTime || Date.now();
 
     const tick = () => {
@@ -32,9 +32,12 @@ export default function ReactionOverlay({ reactionWindow, lastResult, cardReveal
     return () => clearInterval(interval);
   }, [reactionWindow]);
 
-  const progress = reactionWindow?.active
-    ? timeLeft / (reactionWindow.duration || 2500)
-    : 0;
+  const showTimerBar =
+    reactionWindow?.active &&
+    reactionWindow.duration != null &&
+    reactionWindow.duration > 0;
+
+  const progress = showTimerBar ? timeLeft / reactionWindow.duration : 0;
 
   return (
     <>
@@ -67,9 +70,9 @@ export default function ReactionOverlay({ reactionWindow, lastResult, cardReveal
         )}
       </AnimatePresence>
 
-      {/* Timer bar */}
+      {/* Timer bar (hidden when reaction has no countdown) */}
       <AnimatePresence>
-        {reactionWindow?.active && (
+        {showTimerBar && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

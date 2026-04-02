@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PlayerHand from './PlayerHand';
 import DrawPile from './DrawPile';
@@ -15,20 +15,80 @@ export default function GameBoard({
   onCallCheck,
   onReactOwnCard,
   onReactSteal,
+  onResolvePower,
+  onStartQueuedPower,
   pendingStealGive,
 }) {
-  const { myId, phase, currentPlayerId, isMyTurn, drawnCard, drawDeckCount, playPileTop, playPileCount, players, checkCaller } = gameState;
+  const {
+    myId,
+    phase,
+    currentPlayerId,
+    isMyTurn,
+    drawnCard,
+    drawDeckCount,
+    playPileTop,
+    playPileCount,
+    players,
+    checkCaller,
+    pendingPower,
+    canStartQueuedPower = false,
+    queuedPowerControllerName = null,
+  } = gameState;
 
   const me = players.find(p => p.id === myId);
   const opponents = useMemo(() => players.filter(p => p.id !== myId), [players, myId]);
-  const isReactionActive = reactionWindow?.active || false;
+
+  const [reactArmed, setReactArmed] = useState(false);
+  const [queenFirst, setQueenFirst] = useState(null);
+
+  const reactionOpen = reactionWindow?.active || false;
+  const effectiveReact = reactArmed && reactionOpen && !pendingStealGive;
+
+  const isPowerController = phase === 'power-resolve' && pendingPower?.isMyPower;
+  const powerType = pendingPower?.type;
+  const powerStep = pendingPower?.step;
+
+  useEffect(() => {
+    if (!reactionOpen) setReactArmed(false);
+  }, [reactionOpen]);
+
+  useEffect(() => {
+    if (phase === 'power-resolve') setReactArmed(false);
+  }, [phase]);
+
+  useEffect(() => {
+    if (!isPowerController || powerType !== 'queen') setQueenFirst(null);
+  }, [isPowerController, powerType]);
 
   const canDraw = isMyTurn && phase === 'turn-draw';
   const canPlay = isMyTurn && phase === 'turn-action' && drawnCard;
   const canPeek = phase === 'setup-peek' && me && !me.hasPeeked;
   const canCheck = isMyTurn && phase === 'turn-draw' && !checkCaller;
 
-  const handleMyCardClick = (playerId, cardIndex, card) => {
+  const redKingPicking = isPowerController && powerType === 'red-king';
+
+  const handleQueenFieldClick = useCallback((playerId, cardIndex) => {
+    if (!queenFirst) {
+      setQueenFirst({ playerId, cardIndex });
+      return;
+    }
+    if (queenFirst.playerId === playerId && queenFirst.cardIndex === cardIndex) {
+      setQueenFirst(null);
+      return;
+    }
+    onResolvePower({ pos1: queenFirst, pos2: { playerId, cardIndex } });
+    setQueenFirst(null);
+  }, [queenFirst, onResolvePower]);
+
+  const handleBlackKingPeekClick = useCallback((playerId, cardIndex) => {
+    onResolvePower({ targetPlayerId: playerId, cardIndex });
+  }, [onResolvePower]);
+
+  const handleBlackKingSwapClick = useCallback((playerId, cardIndex) => {
+    onResolvePower({ toPos: { playerId, cardIndex } });
+  }, [onResolvePower]);
+
+  const handleMyCardClick = (playerId, cardIndex) => {
     if (canPeek) {
       onPeekCard(cardIndex);
       return;
@@ -37,129 +97,301 @@ export default function GameBoard({
       onReactSteal(cardIndex);
       return;
     }
+    if (isPowerController) {
+      if (powerType === 'jack') {
+        onResolvePower({ cardIndex });
+        return;
+      }
+      if (powerType === 'queen') {
+        handleQueenFieldClick(playerId, cardIndex);
+        return;
+      }
+      if (powerType === 'black-king' && powerStep === 'peek') {
+        handleBlackKingPeekClick(playerId, cardIndex);
+        return;
+      }
+      if (powerType === 'black-king' && powerStep === 'swap') {
+        handleBlackKingSwapClick(playerId, cardIndex);
+        return;
+      }
+    }
     if (canPlay) {
       onSwapCard(cardIndex);
       return;
     }
-    if (isReactionActive) {
+    if (effectiveReact) {
       onReactOwnCard(cardIndex);
-      return;
+      setReactArmed(false);
     }
   };
 
-  const handleOpponentCardClick = (playerId, cardIndex, card) => {
-    if (isReactionActive) {
+  const handleOpponentCardClick = (playerId, cardIndex) => {
+    if (isPowerController) {
+      if (powerType === 'queen') {
+        handleQueenFieldClick(playerId, cardIndex);
+        return;
+      }
+      if (powerType === 'black-king' && powerStep === 'peek') {
+        handleBlackKingPeekClick(playerId, cardIndex);
+        return;
+      }
+      if (powerType === 'black-king' && powerStep === 'swap') {
+        handleBlackKingSwapClick(playerId, cardIndex);
+        return;
+      }
+    }
+    if (effectiveReact) {
       onReactSteal(null, playerId, cardIndex);
-      return;
+      setReactArmed(false);
     }
   };
 
-  const phaseLabel = getPhaseLabel(phase, isMyTurn, canPeek, checkCaller, drawnCard, pendingStealGive, myId);
+  const myCardHandler =
+    redKingPicking || (isPowerController && powerType === 'red-king')
+      ? undefined
+      : handleMyCardClick;
+
+  const oppCardHandler =
+    redKingPicking || !isPowerController
+      ? effectiveReact
+        ? handleOpponentCardClick
+        : undefined
+      : (powerType === 'queen' || powerType === 'black-king')
+        ? handleOpponentCardClick
+        : undefined;
+
+  const phaseLabel = getPhaseLabel({
+    phase,
+    isMyTurn,
+    canPeek,
+    checkCaller,
+    drawnCard,
+    pendingStealGive,
+    myId,
+    reactionOpen,
+    reactArmed,
+    isPowerController,
+    pendingPower,
+    queenFirst,
+    canStartQueuedPower,
+    queuedPowerControllerName,
+  });
+
+  const blackPeeked =
+    powerType === 'black-king' && powerStep === 'swap' && pendingPower?.peekedPosition
+      ? pendingPower.peekedPosition
+      : null;
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Opponents */}
-      <div className="flex-shrink-0 px-4 pt-4 pb-2">
-        <div className="flex flex-wrap justify-center gap-6">
-          {opponents.map(p => (
+    <div className="flex flex-row h-full min-h-0">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0">
+        {/* Opponents */}
+        <div className="flex-shrink-0 px-4 pt-4 pb-2">
+          <div className="flex flex-wrap justify-center gap-6">
+            {opponents.map(p => (
+              <PlayerHand
+                key={p.id}
+                player={p}
+                isMe={false}
+                isActive={p.id === currentPlayerId}
+                onCardClick={oppCardHandler}
+                reactionActive={effectiveReact}
+                selectable={effectiveReact && !pendingStealGive}
+                redKingBannerPick={redKingPicking}
+                onRedKingSelect={redKingPicking ? (id) => onResolvePower({ targetPlayerId: id }) : undefined}
+                powerSlotHighlight={queenFirst}
+                blackKingPeekedSlot={blackPeeked}
+                size="sm"
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Center — Draw pile, play pile, drawn card */}
+        <div className="flex-1 flex items-center justify-center gap-8 px-4 min-h-0">
+          <DrawPile
+            count={drawDeckCount}
+            onClick={onDrawCard}
+            disabled={!canDraw}
+            canDraw={canDraw}
+          />
+
+          <PlayPile
+            topCard={playPileTop}
+            reactionHint={reactionOpen}
+            reactionArmed={effectiveReact}
+            count={playPileCount}
+          />
+
+          <AnimatePresence>
+            {drawnCard && canPlay && (
+              <motion.div
+                initial={{ x: -50, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 50, opacity: 0 }}
+                className="flex flex-col items-center gap-2"
+              >
+                <span className="text-xs text-gray-400">Drawn</span>
+                <Card card={drawnCard} faceUp size="md" highlight />
+                <button type="button" onClick={onPlayDrawnCard} className="btn-primary text-xs px-3 py-1.5 mt-1">
+                  Play to Pile
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Phase indicator & Check button */}
+        <div className="flex-shrink-0 text-center py-2">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={phaseLabel}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -5 }}
+              className="text-sm text-emerald-300/80 font-medium px-2"
+            >
+              {phaseLabel}
+            </motion.div>
+          </AnimatePresence>
+
+          {canCheck && (
+            <motion.button
+              type="button"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              onClick={onCallCheck}
+              className="mt-2 px-6 py-2 bg-red-600/80 hover:bg-red-600 text-white font-bold
+                         rounded-lg shadow-lg transition-all text-sm border border-red-400/30"
+            >
+              Call Check!
+            </motion.button>
+          )}
+        </div>
+
+        {/* My hand */}
+        <div className="flex-shrink-0 pb-4 pt-2 px-4 flex justify-center">
+          {me && (
             <PlayerHand
-              key={p.id}
-              player={p}
-              isMe={false}
-              isActive={p.id === currentPlayerId}
-              onCardClick={isReactionActive ? handleOpponentCardClick : undefined}
-              reactionActive={isReactionActive}
-              selectable={isReactionActive && !pendingStealGive}
-              size="sm"
+              player={me}
+              isMe
+              isActive={me.id === currentPlayerId}
+              onCardClick={myCardHandler}
+              reactionActive={effectiveReact || !!pendingStealGive?.isMyGive}
+              selectable={!!pendingStealGive?.isMyGive}
+              selectedIndex={-1}
+              redKingBannerPick={redKingPicking}
+              onRedKingSelect={redKingPicking ? (id) => onResolvePower({ targetPlayerId: id }) : undefined}
+              powerSlotHighlight={queenFirst}
+              blackKingPeekedSlot={blackPeeked}
+              size="lg"
             />
-          ))}
+          )}
         </div>
       </div>
 
-      {/* Center — Draw pile, play pile, drawn card */}
-      <div className="flex-1 flex items-center justify-center gap-8 px-4 min-h-0">
-        <DrawPile
-          count={drawDeckCount}
-          onClick={onDrawCard}
-          disabled={!canDraw}
-          canDraw={canDraw}
-        />
-
-        <PlayPile
-          topCard={playPileTop}
-          reactionActive={isReactionActive}
-          count={playPileCount}
-        />
-
-        <AnimatePresence>
-          {drawnCard && canPlay && (
-            <motion.div
-              initial={{ x: -50, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 50, opacity: 0 }}
-              className="flex flex-col items-center gap-2"
+      {/* React sidebar — only you arm; does not block others */}
+      {reactionOpen && !pendingStealGive && (
+        <div className="flex-shrink-0 w-[88px] border-l border-gold-600/15 bg-black/20 flex flex-col items-center py-4 px-2 gap-2">
+          <span className="text-[10px] text-gray-500 uppercase tracking-wide text-center leading-tight">
+            Pile
+          </span>
+          {reactArmed ? (
+            <button
+              type="button"
+              onClick={() => setReactArmed(false)}
+              className="w-full py-2 px-1 rounded-lg text-xs font-bold bg-gray-700/80 text-gray-200 border border-gray-500/40 hover:bg-gray-600"
             >
-              <span className="text-xs text-gray-400">Drawn</span>
-              <Card card={drawnCard} faceUp size="md" highlight />
-              <button onClick={onPlayDrawnCard} className="btn-primary text-xs px-3 py-1.5 mt-1">
-                Play to Pile
-              </button>
-            </motion.div>
+              Cancel
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setReactArmed(true)}
+              className="w-full py-2 px-1 rounded-lg text-xs font-bold bg-amber-600/90 text-black border border-amber-400/50 hover:bg-amber-500 shadow-glow"
+            >
+              React
+            </button>
           )}
-        </AnimatePresence>
-      </div>
-
-      {/* Phase indicator & Check button */}
-      <div className="flex-shrink-0 text-center py-2">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={phaseLabel}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -5 }}
-            className="text-sm text-emerald-300/80 font-medium"
+          <button
+            type="button"
+            onClick={() => onStartQueuedPower?.()}
+            disabled={!canStartQueuedPower}
+            className={`w-full py-2 px-1 rounded-lg text-xs font-bold border mt-1 ${
+              canStartQueuedPower
+                ? 'bg-emerald-700/90 text-white border-emerald-500/50 hover:bg-emerald-600'
+                : 'bg-gray-800/50 text-gray-500 border-gray-600/30 cursor-not-allowed'
+            }`}
           >
-            {phaseLabel}
-          </motion.div>
-        </AnimatePresence>
-
-        {canCheck && (
-          <motion.button
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            onClick={onCallCheck}
-            className="mt-2 px-6 py-2 bg-red-600/80 hover:bg-red-600 text-white font-bold
-                       rounded-lg shadow-lg transition-all text-sm border border-red-400/30"
-          >
-            Call Check!
-          </motion.button>
-        )}
-      </div>
-
-      {/* My hand */}
-      <div className="flex-shrink-0 pb-4 pt-2 px-4 flex justify-center">
-        {me && (
-          <PlayerHand
-            player={me}
-            isMe
-            isActive={me.id === currentPlayerId}
-            onCardClick={handleMyCardClick}
-            reactionActive={isReactionActive || !!pendingStealGive?.isMyGive}
-            selectable={!!pendingStealGive?.isMyGive}
-            selectedIndex={-1}
-            size="lg"
-          />
-        )}
-      </div>
+            Resolve
+          </button>
+          <p className="text-[9px] text-gray-600 text-center leading-tight mt-1">
+            {canStartQueuedPower
+              ? 'Start resolving the power you played'
+              : 'Only the pile power’s controller can tap Resolve'}
+          </p>
+          <p className="text-[9px] text-gray-600 text-center leading-tight">
+            Arm React, then tap a card
+          </p>
+        </div>
+      )}
     </div>
   );
 }
 
-function getPhaseLabel(phase, isMyTurn, canPeek, checkCaller, drawnCard, pendingStealGive, myId) {
+function getPhaseLabel({
+  phase,
+  isMyTurn,
+  canPeek,
+  checkCaller,
+  drawnCard,
+  pendingStealGive,
+  reactionOpen,
+  reactArmed,
+  isPowerController,
+  pendingPower,
+  queenFirst,
+  canStartQueuedPower,
+  queuedPowerControllerName,
+}) {
   if (phase === 'steal-give' && pendingStealGive?.isMyGive) {
     return `You called it right — tap one of YOUR cards to give to ${pendingStealGive.victimName || 'opponent'}`;
   }
   if (phase === 'steal-give') return 'Waiting for the stealer to complete the trade…';
+
+  if (isPowerController && pendingPower) {
+    switch (pendingPower.type) {
+      case 'jack':
+        return 'Jack — tap one of your face-down cards to peek';
+      case 'queen':
+        return queenFirst
+          ? 'Queen — tap a second card anywhere to swap with the first'
+          : 'Queen — tap any face-down card as the first swap';
+      case 'red-king':
+        return 'Red King — tap a player name to give them a new card';
+      case 'black-king':
+        return pendingPower.step === 'peek'
+          ? 'Black King — tap any face-down card to peek'
+          : 'Black King — tap where to move the peeked card';
+      default:
+        return 'Resolve your power…';
+    }
+  }
+
+  if (queuedPowerControllerName && phase !== 'power-resolve') {
+    if (canStartQueuedPower) {
+      return 'Optional: React on the right, or Resolve to start your pile power';
+    }
+    return `Waiting for ${queuedPowerControllerName} to resolve the power on the pile…`;
+  }
+
+  if (reactionOpen && reactArmed) {
+    return 'Reacting — tap your card or an opponent’s to match / blind-call';
+  }
+  if (reactionOpen) {
+    return 'Optional: tap React on the right to try the pile';
+  }
+
   if (canPeek) return 'Peek at one of your cards (tap to peek)';
   if (phase === 'setup-peek') return 'Waiting for all players to peek...';
   if (phase === 'turn-draw' && isMyTurn) return 'Your turn — draw a card from the deck';
@@ -167,7 +399,6 @@ function getPhaseLabel(phase, isMyTurn, canPeek, checkCaller, drawnCard, pending
   if (phase === 'turn-action' && isMyTurn && drawnCard) return 'Play to pile or tap a card to swap';
   if (phase === 'turn-action') return 'Waiting for active player...';
   if (phase === 'power-resolve') return 'Resolving power card...';
-  if (phase === 'reaction-window') return 'React! Tap a card to match the pile';
   if (phase === 'game-over') return 'Game Over!';
   if (checkCaller) return 'Check has been called — final rounds!';
   return '';

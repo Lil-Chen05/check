@@ -44,6 +44,13 @@ export default function gameHandlers(io, socket, rooms) {
     const { room, gameState } = getGameContext(socket, rooms);
     if (!gameState) return callback?.({ error: 'No active game' });
 
+    const queuedBeforePlay = gameState.powerQueue.length;
+
+    surrenderOpenReactionWindow(io, room, gameState);
+    if (gameState.phase === 'power-resolve') {
+      return callback?.({ error: 'Resolve the power card first' });
+    }
+
     const result = gameState.playDrawnCard(socket.userId);
     if (result.error) return callback?.({ error: result.error });
 
@@ -54,15 +61,23 @@ export default function gameHandlers(io, socket, rooms) {
     });
 
     if (result.triggersReaction) {
-      startReactionWindow(io, room, gameState);
+      beginOrDeferPostPlayReaction(io, room, gameState, queuedBeforePlay);
     }
 
+    broadcastGameState(io, room);
     callback?.({ success: true });
   });
 
   socket.on('swap-card', ({ handIndex }, callback) => {
     const { room, gameState } = getGameContext(socket, rooms);
     if (!gameState) return callback?.({ error: 'No active game' });
+
+    const queuedBeforePlay = gameState.powerQueue.length;
+
+    surrenderOpenReactionWindow(io, room, gameState);
+    if (gameState.phase === 'power-resolve') {
+      return callback?.({ error: 'Resolve the power card first' });
+    }
 
     const result = gameState.swapCard(socket.userId, handIndex);
     if (result.error) return callback?.({ error: result.error });
@@ -74,10 +89,37 @@ export default function gameHandlers(io, socket, rooms) {
     });
 
     if (result.triggersReaction) {
-      startReactionWindow(io, room, gameState);
+      beginOrDeferPostPlayReaction(io, room, gameState, queuedBeforePlay);
     }
 
+    broadcastGameState(io, room);
     callback?.({ success: true });
+  });
+
+  socket.on('start-queued-power', (callback) => {
+    const { room, gameState } = getGameContext(socket, rooms);
+    if (!gameState) return callback?.({ error: 'No active game' });
+
+    if (gameState.phase === 'power-resolve') {
+      return callback?.({ error: 'A power is already being resolved' });
+    }
+    if (gameState.powerQueue.length === 0) {
+      return callback?.({ error: 'Nothing to resolve' });
+    }
+    const head = gameState.powerQueue[0];
+    if (head.controllerId !== socket.userId) {
+      return callback?.({ error: 'Only the player who controls this power can resolve it' });
+    }
+
+    surrenderOpenReactionWindow(io, room, gameState);
+    const started = gameState.startNextPower();
+    if (!started) {
+      return callback?.({ error: 'Could not start power' });
+    }
+    gameState.suppressNextFinishTurn = true;
+
+    callback?.({ success: true });
+    broadcastGameState(io, room);
   });
 
   socket.on('resolve-power', (data, callback) => {
@@ -96,7 +138,19 @@ export default function gameHandlers(io, socket, rooms) {
     if (gameState.pendingPower === null) {
       const nextPower = gameState.startNextPower();
       if (!nextPower) {
-        finishTurn(io, room, gameState);
+        if (gameState.deferReactionAndTurnAfterPowers) {
+          gameState.deferReactionAndTurnAfterPowers = false;
+          startReactionWindow(io, room, gameState);
+          finishTurn(io, room, gameState);
+          gameState.alreadyAdvancedForPendingReaction = true;
+        } else if (gameState.suppressNextFinishTurn) {
+          gameState.suppressNextFinishTurn = false;
+          // Turn was already advanced when the power was queued; skip advanceTurn but exit power-resolve.
+          gameState.drawnCard = null;
+          gameState.phase = 'turn-draw';
+        } else {
+          finishTurn(io, room, gameState);
+        }
       }
     }
 
@@ -138,26 +192,52 @@ function getGameContext(socket, rooms) {
 }
 
 function startReactionWindow(io, room, gameState) {
-  const duration = gameState.openReactionWindow();
-  if (!duration) {
+  const meta = gameState.openReactionWindow();
+  if (!meta?.opened) {
     processPowerQueueOrAdvance(io, room, gameState);
     return;
   }
 
   io.to(room.code).emit('reaction-window-open', {
     cardOnPile: gameState.playPile[gameState.playPile.length - 1],
-    duration,
+    duration: null,
   });
 
   broadcastGameState(io, room);
+}
 
-  gameState.reactionWindow.timer = setTimeout(() => {
-    gameState.closeReactionWindow();
-    io.to(room.code).emit('reaction-window-closed');
+/** End the current open reaction (no successful match) when the next player plays to the pile. */
+function surrenderOpenReactionWindow(io, room, gameState) {
+  if (!gameState.reactionWindow.active) return;
 
-    processPowerQueueOrAdvance(io, room, gameState);
-    broadcastGameState(io, room);
-  }, duration);
+  if (gameState.reactionWindow.timer) {
+    clearTimeout(gameState.reactionWindow.timer);
+    gameState.reactionWindow.timer = null;
+  }
+  gameState.closeReactionWindow();
+  gameState.alreadyAdvancedForPendingReaction = false;
+  io.to(room.code).emit('reaction-window-closed');
+}
+
+/**
+ * After a card hits the pile: if powers were already waiting from a previous top card,
+ * resolve FIFO before opening a reaction for the new top card + advancing turn.
+ * If the queue was empty before this play, open reaction now (this play's power waits like before).
+ */
+function beginOrDeferPostPlayReaction(io, room, gameState, queuedBeforePlay) {
+  if (queuedBeforePlay > 0) {
+    gameState.deferReactionAndTurnAfterPowers = true;
+    const started = gameState.startNextPower();
+    if (!started) {
+      gameState.deferReactionAndTurnAfterPowers = false;
+    } else {
+      broadcastGameState(io, room);
+      return;
+    }
+  }
+  startReactionWindow(io, room, gameState);
+  finishTurn(io, room, gameState);
+  gameState.alreadyAdvancedForPendingReaction = true;
 }
 
 function processPowerQueueOrAdvance(io, room, gameState) {

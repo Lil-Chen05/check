@@ -107,9 +107,17 @@ function closeAndAdvance(io, room, gameState) {
   gameState.closeReactionWindow();
   io.to(room.code).emit('reaction-window-closed');
 
+  const skipAdvance = gameState.alreadyAdvancedForPendingReaction;
+  gameState.alreadyAdvancedForPendingReaction = false;
+
   const nextPower = gameState.startNextPower();
   if (nextPower) {
+    if (skipAdvance) gameState.suppressNextFinishTurn = true;
     broadcastGameState(io, room);
+    return;
+  }
+
+  if (skipAdvance) {
     return;
   }
 

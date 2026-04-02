@@ -4,7 +4,6 @@ import { useAuth } from '../hooks/useAuth';
 import { useSocket } from '../hooks/useSocket';
 import { useGameState } from '../hooks/useGameState';
 import GameBoard from '../components/GameBoard';
-import PowerModal from '../components/PowerModal';
 import ReactionOverlay from '../components/ReactionOverlay';
 import ScoreBoard from '../components/ScoreBoard';
 
@@ -33,6 +32,7 @@ export default function GamePage() {
   } = useGameState(null, on);
 
   const [peekedCard, setPeekedCard] = useState(null);
+  const [actionError, setActionError] = useState('');
 
   useEffect(() => {
     if (!on) return;
@@ -62,11 +62,23 @@ export default function GamePage() {
   }, [emit]);
 
   const handlePlayDrawnCard = useCallback(async () => {
-    await emit('play-drawn-card');
+    const res = await emit('play-drawn-card');
+    if (res?.error) {
+      setActionError(res.error);
+      setTimeout(() => setActionError(''), 5000);
+    } else {
+      setActionError('');
+    }
   }, [emit]);
 
   const handleSwapCard = useCallback(async (handIndex) => {
-    await emit('swap-card', { handIndex });
+    const res = await emit('swap-card', { handIndex });
+    if (res?.error) {
+      setActionError(res.error);
+      setTimeout(() => setActionError(''), 5000);
+    } else {
+      setActionError('');
+    }
   }, [emit]);
 
   const handleCallCheck = useCallback(async () => {
@@ -99,6 +111,16 @@ export default function GamePage() {
     }
   }, [emit]);
 
+  const handleStartQueuedPower = useCallback(async () => {
+    const res = await emit('start-queued-power');
+    if (res?.error) {
+      setActionError(res.error);
+      setTimeout(() => setActionError(''), 5000);
+    } else {
+      setActionError('');
+    }
+  }, [emit]);
+
   const handleReturnToLobby = useCallback(async () => {
     await emit('return-to-lobby');
     navigate(`/lobby/${roomCode}`);
@@ -122,16 +144,18 @@ export default function GamePage() {
     );
   }
 
-  const showPowerModal =
-    gameState.phase === 'power-resolve' &&
-    gameState.pendingPower?.isMyPower;
-
   return (
     <div className="h-screen felt-bg flex flex-col relative overflow-hidden">
       {/* Check call banner */}
       {checkCallInfo && (
         <div className="absolute top-0 left-0 right-0 z-30 bg-red-600/90 text-white text-center py-2 text-sm font-bold animate-slide-up">
           {checkCallInfo.callerName} called CHECK! Final rounds!
+        </div>
+      )}
+
+      {actionError && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-30 max-w-md px-4 py-2 rounded-lg bg-amber-900/95 border border-amber-500/40 text-amber-100 text-sm text-center shadow-lg">
+          {actionError}
         </div>
       )}
 
@@ -145,6 +169,8 @@ export default function GamePage() {
         onCallCheck={handleCallCheck}
         onReactOwnCard={handleReactOwnCard}
         onReactSteal={handleReactSteal}
+        onResolvePower={handleResolvePower}
+        onStartQueuedPower={handleStartQueuedPower}
         pendingStealGive={gameState.pendingStealGive}
       />
 
@@ -178,14 +204,6 @@ export default function GamePage() {
         </div>
       )}
 
-      {showPowerModal && (
-        <PowerModal
-          power={gameState.pendingPower}
-          players={gameState.players}
-          myId={userId}
-          onResolve={handleResolvePower}
-        />
-      )}
     </div>
   );
 }
