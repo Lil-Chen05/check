@@ -20,6 +20,8 @@ export default class GameState {
     this.currentPlayerIndex = 0;
     this.phase = 'setup-peek';
     this.drawnCard = null;
+    /** True when drawnCard came from the play pile — must swap, cannot play straight to pile. */
+    this.drawnFromPlayPile = false;
     this.checkCaller = null;
     this.checkCallerIndex = null;
     this.finalTurnsRemaining = null;
@@ -132,7 +134,34 @@ export default class GameState {
     if (this.drawDeck.length === 0) return { error: 'No cards available' };
 
     this.drawnCard = this.drawDeck.pop();
+    this.drawnFromPlayPile = false;
     this.phase = 'turn-action';
+
+    return {
+      success: true,
+      card: { id: this.drawnCard.id, rank: this.drawnCard.rank, suit: this.drawnCard.suit },
+    };
+  }
+
+  /**
+   * Take the current play-pile top instead of drawing. Held card must be swapped with a hand card
+   * (never played straight back). Taking a power card does not queue a power — only the swapped-on card can.
+   */
+  takePlayPileTop(playerId) {
+    if (this.phase !== 'turn-draw') return { error: 'Not in draw phase' };
+    if (this.currentPlayer().id !== playerId) return { error: 'Not your turn' };
+    if (this.hasUnresolvedQueuedPower()) return { error: GameState.QUEUED_POWER_WAIT_ERROR };
+    if (this.playPile.length < 1) return { error: 'No card on the play pile' };
+
+    const player = this.getPlayer(playerId);
+    if (!player || player.hand.length < 1) {
+      return { error: 'You need at least one hand card to swap after taking from the pile' };
+    }
+
+    this.drawnCard = this.playPile.pop();
+    this.drawnFromPlayPile = true;
+    this.phase = 'turn-action';
+    this.lastEvent = { type: 'card-taken-from-pile', card: this.drawnCard, playerId };
 
     return {
       success: true,
@@ -145,9 +174,13 @@ export default class GameState {
     if (this.currentPlayer().id !== playerId) return { error: 'Not your turn' };
     if (this.hasUnresolvedQueuedPower()) return { error: GameState.QUEUED_POWER_WAIT_ERROR };
     if (!this.drawnCard) return { error: 'No drawn card' };
+    if (this.drawnFromPlayPile) {
+      return { error: 'You must swap this card with one in your hand — you cannot play it straight back to the pile' };
+    }
 
     const card = this.drawnCard;
     this.drawnCard = null;
+    this.drawnFromPlayPile = false;
     this.playPile.push(card);
 
     if (isPowerCard(card)) {
@@ -180,6 +213,7 @@ export default class GameState {
     const displaced = player.hand[handIndex];
     player.hand[handIndex] = this.drawnCard;
     this.drawnCard = null;
+    this.drawnFromPlayPile = false;
     this.playPile.push(displaced);
 
     if (isPowerCard(displaced)) {
@@ -301,6 +335,7 @@ export default class GameState {
   // ── Turn Advancement ────────────────────────────
   advanceTurn() {
     this.drawnCard = null;
+    this.drawnFromPlayPile = false;
 
     if (this.finalTurnsRemaining !== null) {
       this.finalTurnsRemaining--;
@@ -363,6 +398,7 @@ export default class GameState {
       drawnCard: isActivePlayer && this.drawnCard
         ? { id: this.drawnCard.id, rank: this.drawnCard.rank, suit: this.drawnCard.suit }
         : null,
+      drawnFromPlayPile: isActivePlayer && this.drawnFromPlayPile,
 
       players: this.players.map(p => ({
         id: p.id,

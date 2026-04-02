@@ -61,6 +61,16 @@ export default function GamePage() {
     await emit('draw-card');
   }, [emit]);
 
+  const handleTakeFromPile = useCallback(async () => {
+    const res = await emit('take-play-pile-top');
+    if (res?.error) {
+      setActionError(res.error);
+      setTimeout(() => setActionError(''), 5000);
+    } else {
+      setActionError('');
+    }
+  }, [emit]);
+
   const handlePlayDrawnCard = useCallback(async () => {
     const res = await emit('play-drawn-card');
     if (res?.error) {
@@ -146,15 +156,8 @@ export default function GamePage() {
 
   return (
     <div className="h-screen felt-bg flex flex-col relative overflow-hidden">
-      {/* Check call banner */}
-      {checkCallInfo && (
-        <div className="absolute top-0 left-0 right-0 z-30 bg-red-600/90 text-white text-center py-2 text-sm font-bold animate-slide-up">
-          {checkCallInfo.callerName} called CHECK! Final rounds!
-        </div>
-      )}
-
       {actionError && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-30 max-w-md px-4 py-2 rounded-lg bg-amber-900/95 border border-amber-500/40 text-amber-100 text-sm text-center shadow-lg">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 max-w-md px-4 py-2 rounded-lg bg-amber-900/95 border border-amber-500/40 text-amber-100 text-sm text-center shadow-lg">
           {actionError}
         </div>
       )}
@@ -162,7 +165,9 @@ export default function GamePage() {
       <GameBoard
         gameState={gameState}
         reactionWindow={reactionWindow}
+        checkCallInfo={checkCallInfo}
         onDrawCard={handleDrawCard}
+        onTakeFromPile={handleTakeFromPile}
         onPlayDrawnCard={handlePlayDrawnCard}
         onSwapCard={handleSwapCard}
         onPeekCard={handlePeekCard}

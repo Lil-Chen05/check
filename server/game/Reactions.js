@@ -30,6 +30,11 @@ export function openWindow(gameState, cardOnPile, playedBy, isFromReaction = fal
 }
 
 export function handleOwnCardReaction(gameState, reactorId, cardIndex) {
+  if (gameState.drawnFromPlayPile) {
+    return {
+      error: 'Wait for the active player to finish swapping after taking from the pile',
+    };
+  }
   const rw = gameState.reactionWindow;
   if (!rw.active) return { error: 'No active reaction window' };
   if (rw.attemptedPlayers.has(reactorId)) return { error: 'Already attempted this window' };
@@ -139,6 +144,12 @@ export function handleStealReaction(gameState, reactorId, targetPlayerId, target
 
   if (giveCardIndex !== undefined && giveCardIndex !== null) {
     return { error: 'Tap an opponent card first to call a blind steal' };
+  }
+
+  if (gameState.drawnFromPlayPile) {
+    return {
+      error: 'Wait for the active player to finish swapping after taking from the pile',
+    };
   }
 
   const rw = gameState.reactionWindow;

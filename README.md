@@ -78,7 +78,7 @@ Open http://localhost:5173 in multiple browser windows to test multiplayer.
 2. **Create a room** or join one with a 6-character code
 3. Once 3–12 players have joined, the host starts the game
 4. Each player receives 4 face-down cards and peeks at one
-5. On your turn, draw a card then either play it or swap it with one of your cards
+5. On your turn, draw from the deck **or take the play-pile top**; then play or swap — if you took from the pile you must swap (see [`docs/rules.md`](docs/rules.md))
 6. **React instantly** when a card hits the pile — if you have a matching card, slam it!
 7. Call **Check** when you think you have the lowest score
 8. Lowest total points wins

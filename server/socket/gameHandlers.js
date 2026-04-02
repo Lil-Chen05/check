@@ -40,6 +40,20 @@ export default function gameHandlers(io, socket, rooms) {
     broadcastGameState(io, room);
   });
 
+  socket.on('take-play-pile-top', (callback) => {
+    const { room, gameState } = getGameContext(socket, rooms);
+    if (!gameState) return callback?.({ error: 'No active game' });
+
+    const result = gameState.takePlayPileTop(socket.userId);
+    if (result.error) return callback?.({ error: result.error });
+
+    /** Taking the pile top changes the visible top card; close any reaction targeting the old top. */
+    surrenderOpenReactionWindow(io, room, gameState);
+
+    callback?.({ success: true, card: result.card });
+    broadcastGameState(io, room);
+  });
+
   socket.on('play-drawn-card', (callback) => {
     const { room, gameState } = getGameContext(socket, rooms);
     if (!gameState) return callback?.({ error: 'No active game' });
@@ -146,6 +160,7 @@ export default function gameHandlers(io, socket, rooms) {
           gameState.suppressNextFinishTurn = false;
           // Turn was already advanced when the power was queued; skip advanceTurn but exit power-resolve.
           gameState.drawnCard = null;
+          gameState.drawnFromPlayPile = false;
           gameState.phase = 'turn-draw';
         } else {
           finishTurn(io, room, gameState);
@@ -238,6 +253,7 @@ function beginOrDeferPostPlayReaction(io, room, gameState, queuedBeforePlay) {
   // Power on the pile is queued but not resolving yet — keep turn on the player who played it until powers finish.
   if (gameState.powerQueue.length > 0 && !gameState.pendingPower) {
     gameState.drawnCard = null;
+    gameState.drawnFromPlayPile = false;
     gameState.phase = 'turn-draw';
     return;
   }

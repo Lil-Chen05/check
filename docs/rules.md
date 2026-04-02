@@ -30,14 +30,15 @@ These rules are the authoritative specification for gameplay. The implemented se
 
 ## Turn Structure
 
-1. Draw the top card from the draw deck and show it **only** to the active player.
-2. The player has two options:
-   - **Play it directly** onto the play pile, triggering its power if it has one.
-   - **Swap** it with one of their own face-down cards:
-     - the player must select their face-down card first,
-     - and cannot change their mind once selected,
-     - then the displaced face-down card is played onto the play pile, triggering its power if applicable.
+1. The active player must **acquire** one face-up card to hold for this turn, either:
+   - **Draw** the top card from the draw deck (shown only to them), or
+   - **Take** the current top card from the play pile (already visible to everyone). They must have at least one hand card to swap afterward.
+2. Then:
+   - If they **drew** from the deck, they may either **play that card** onto the play pile (triggering its power if any) **or** **swap** it with one of their face-down hand cards (the displaced card is played onto the pile and may trigger powers).
+   - If they **took** from the play pile, they **must swap** that card with one of their face-down hand cards. They **may not** play the taken card straight back onto the pile. The card they took (even if it was a power while on the pile) is now face-down in their hand and **does not** resolve its power until it is **later** played onto the pile like any other card. Only the **displaced** hand card that hits the pile can trigger a power or reaction this turn.
 3. Turn ends.
+
+Swap rules when swapping: the player selects their face-down card; the displaced card is played onto the play pile.
 
 ## Power Cards
 
