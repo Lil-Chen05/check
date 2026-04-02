@@ -1,5 +1,8 @@
 import { getEffectiveRank, isPowerCard, getPowerType } from './Deck.js';
 
+/** At this hand size or above, blind-steal vs opponents is disallowed (own-card react still allowed). */
+export const MAX_HAND_FOR_STEAL_REACT = 7;
+
 /** Full rank/suit for everyone to see during reaction reveal (3s on client). */
 export function publicCard(card) {
   if (!card) return null;
@@ -150,6 +153,12 @@ export function handleStealReaction(gameState, reactorId, targetPlayerId, target
   }
   if (reactorId === targetPlayerId) return { error: 'Cannot steal from yourself — use own card reaction' };
   if (targetCardIndex < 0 || targetCardIndex >= victim.hand.length) return { error: 'Invalid target card index' };
+  if (reactor.hand.length >= MAX_HAND_FOR_STEAL_REACT) {
+    return {
+      error:
+        'You have 7 cards — you cannot blind-steal from others. Match the pile with one of your own cards.',
+    };
+  }
 
   rw.attemptedPlayers.add(reactorId);
   const prospectCard = victim.hand[targetCardIndex];

@@ -5,6 +5,9 @@ import DrawPile from './DrawPile';
 import PlayPile from './PlayPile';
 import Card from './Card';
 
+/** Keep in sync with server/game/Reactions.js MAX_HAND_FOR_STEAL_REACT */
+const MAX_HAND_FOR_STEAL_REACT = 7;
+
 export default function GameBoard({
   gameState,
   reactionWindow,
@@ -43,6 +46,8 @@ export default function GameBoard({
 
   const reactionOpen = reactionWindow?.active || false;
   const effectiveReact = reactArmed && reactionOpen && !pendingStealGive;
+  const reactStealAllowed =
+    effectiveReact && me && me.cardCount < MAX_HAND_FOR_STEAL_REACT;
 
   const isPowerController = phase === 'power-resolve' && pendingPower?.isMyPower;
   const powerType = pendingPower?.type;
@@ -141,7 +146,7 @@ export default function GameBoard({
         return;
       }
     }
-    if (effectiveReact) {
+    if (reactStealAllowed) {
       onReactSteal(null, playerId, cardIndex);
       setReactArmed(false);
     }
@@ -154,7 +159,7 @@ export default function GameBoard({
 
   const oppCardHandler =
     redKingPicking || !isPowerController
-      ? effectiveReact
+      ? reactStealAllowed
         ? handleOpponentCardClick
         : undefined
       : (powerType === 'queen' || powerType === 'black-king')
@@ -196,8 +201,8 @@ export default function GameBoard({
                 isMe={false}
                 isActive={p.id === currentPlayerId}
                 onCardClick={oppCardHandler}
-                reactionActive={effectiveReact}
-                selectable={effectiveReact && !pendingStealGive}
+                reactionActive={reactStealAllowed}
+                selectable={reactStealAllowed && !pendingStealGive}
                 redKingBannerPick={redKingPicking}
                 onRedKingSelect={redKingPicking ? (id) => onResolvePower({ targetPlayerId: id }) : undefined}
                 powerSlotHighlight={queenFirst}
@@ -330,7 +335,9 @@ export default function GameBoard({
                   : "Only the pile power's controller can tap Resolve"}
               </p>
               <p className="text-[9px] text-gray-600 text-center leading-tight">
-                Arm React, then tap a card
+                {effectiveReact && me && me.cardCount >= MAX_HAND_FOR_STEAL_REACT
+                  ? 'Hand full — match the pile with your own cards only'
+                  : 'Arm React, then tap a card'}
               </p>
             </>
           )}
