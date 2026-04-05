@@ -36,6 +36,8 @@ export default function PlayerHand({
   optimisticPowerSecond = null,
   /** My hand: index highlighted red before draw swap resolves */
   optimisticDrawHandIndex = null,
+  /** Failed blind steal: orange ring on the victim's targeted slot */
+  exposedSlot = null,
 }) {
   const cards = player.hand || [];
   const box = slotBoxClass(size);
@@ -130,6 +132,9 @@ export default function PlayerHand({
                 !optDrawRed &&
                 blueSelectSlots.some((s) => s.playerId === player.id && s.index === index);
 
+              const isExposed =
+                exposedSlot?.playerId === player.id && exposedSlot?.cardIndex === index;
+
               const staticOverlayClass = (() => {
                 if (swapOverlayClass) return '';
                 if (optPowerRed || optDrawRed) {
@@ -137,6 +142,9 @@ export default function PlayerHand({
                 }
                 if (selectBlue) {
                   return 'ring-2 ring-blue-400 shadow-[0_0_12px_rgba(96,165,250,0.45)]';
+                }
+                if (isExposed) {
+                  return 'ring-2 ring-orange-400 shadow-[0_0_12px_rgba(251,146,60,0.5)]';
                 }
                 return '';
               })();

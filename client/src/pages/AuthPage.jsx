@@ -10,7 +10,7 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { signIn, signUp, isConfigured } = useAuth();
+  const { signIn, signUp, playAsGuest, isConfigured } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,7 +39,10 @@ export default function AuthPage() {
     }
   };
 
-  const handleSkipAuth = () => navigate('/home');
+  const handlePlayAsGuest = () => {
+    playAsGuest();
+    navigate('/home');
+  };
 
   return (
     <div className="min-h-screen felt-bg flex items-center justify-center p-4">
@@ -110,16 +113,14 @@ export default function AuthPage() {
             </button>
           </form>
 
-          {!isConfigured && (
-            <div className="mt-6 pt-4 border-t border-antique-gold-700/15">
-              <p className="text-xs text-antique-gold-700/55 mb-3 text-center">
-                Supabase not configured — play without an account
-              </p>
-              <button onClick={handleSkipAuth} className="btn-secondary w-full text-sm">
-                Play as Guest
-              </button>
-            </div>
-          )}
+          <div className="mt-6 pt-4 border-t border-antique-gold-700/15">
+            <p className="text-xs text-antique-gold-700/55 mb-3 text-center">
+              No account? Jump straight in
+            </p>
+            <button onClick={handlePlayAsGuest} className="btn-secondary w-full text-sm">
+              Play as Guest
+            </button>
+          </div>
         </div>
       </div>
     </div>

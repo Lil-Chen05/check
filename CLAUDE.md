@@ -21,7 +21,7 @@ npm run build  # Production build → dist/
 npm run preview # Preview production build (http://localhost:4173)
 ```
 
-Both are separate projects — run each in its own terminal. No root-level package.json.
+Both are separate projects — run each in its own terminal. No root-level package.json. No test runner is configured — neither client nor server has test scripts.
 
 ## Environment Setup
 
@@ -68,6 +68,23 @@ The game rules are implemented exclusively server-side:
 | `useAuth.jsx` | Supabase auth (optional; guest play works without it) |
 | `useCompactTableLayout.js` | Layout math for the game board |
 | `useTableFeedback.js` | Visual feedback for table interactions |
+| `useEventLog.js` | Builds human-readable event log from `gameState.lastEventFeedback` and `lastReactionResult`; entries expire after 5 s, max 4 shown |
+
+### Notable Client Components (`client/src/components/`)
+- **`EventLog.jsx`** — floating top-right log of recent actions; receives `entries[]` from `useEventLog`; pointer-events disabled so it never blocks interaction
+- **`SwapArc.jsx`** — SVG arc connecting two card slots after a Queen/Black-King swap; reads card positions from `data-slot-player` / `data-slot-index` DOM attributes
+
+### State Management Pattern
+`useGameState` is the single source of truth — it subscribes directly to socket events and owns all game state. Child hooks (`useEventLog`, `useTableFeedback`) and components consume `gameState` as a prop and do **not** add their own socket listeners. `GameBoard` uses local optimistic state (`optimisticPowerSecond`, `optimisticDrawSlot`) for immediate visual feedback while awaiting the next `game-state` broadcast.
+
+### Socket Patterns
+All client→server events use acknowledgment callbacks: `callback?.({ success: true })` / `callback?.({ error: '...' })`.
+
+Key client→server events: `draw-card`, `play-drawn-card`, `swap-card`, `peek-card`, `call-check`, `react-own-card`, `react-steal`, `resolve-power`, `return-to-lobby`.
+
+Key server→client broadcasts: `game-state`, `reaction-window-open`, `reaction-window-closed`, `reaction-result`, `game-over`, `returned-to-lobby`.
+
+**Shared constant**: `MAX_HAND_FOR_STEAL_REACT = 7` is defined in `server/game/Reactions.js` and must stay in sync with any client-side enforcement.
 
 ## Key Game Rules (for implementing features)
 

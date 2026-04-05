@@ -287,13 +287,21 @@ async function updateWinStats(room, scores) {
     const { default: supabase } = await import('../supabaseClient.js');
     if (!supabase) return;
 
-    const winner = scores[0];
-    await supabase.rpc('increment_wins', { user_id: winner.id }).catch(() => {});
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const realPlayers = scores.filter(s => UUID_RE.test(s.id));
+    if (realPlayers.length === 0) return;
 
-    const updates = scores.map(s =>
-      supabase.rpc('increment_games_played', { user_id: s.id }).catch(() => {})
+    const winnerId = realPlayers[0].id;
+
+    await Promise.all(
+      realPlayers.map(s =>
+        supabase.rpc('update_player_stats', {
+          p_user_id: s.id,
+          p_is_winner: s.id === winnerId,
+          p_points: s.points,
+        }).catch(() => {})
+      )
     );
-    await Promise.all(updates);
   } catch {
     // stats update is best-effort
   }

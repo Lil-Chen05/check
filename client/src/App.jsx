@@ -1,54 +1,47 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import AuthPage from './pages/AuthPage';
-import HomePage from './pages/HomePage';
+import DashboardPage from './pages/DashboardPage';
+import CasualPage from './pages/CasualPage';
+import RankedPage from './pages/RankedPage';
+import LeaderboardPage from './pages/LeaderboardPage';
 import LobbyPage from './pages/LobbyPage';
 import GamePage from './pages/GamePage';
 
 function ProtectedRoute({ children }) {
-  const { user, loading, isConfigured } = useAuth();
+  const { user, guestMode, loading, isConfigured } = useAuth();
 
   if (loading) {
     return (
       <div className="min-h-screen felt-bg flex items-center justify-center">
-        <div className="text-gold-400 text-xl animate-pulse">Loading...</div>
+        <div className="text-antique-gold-400 text-xl animate-pulse">Loading...</div>
       </div>
     );
   }
 
-  if (isConfigured && !user) return <Navigate to="/" replace />;
+  if (isConfigured && !user && !guestMode) return <Navigate to="/" replace />;
   return children;
 }
 
 function AppRoutes() {
-  const { user, isConfigured } = useAuth();
+  const { user, guestMode, isConfigured } = useAuth();
 
   return (
     <Routes>
       <Route
         path="/"
         element={
-          isConfigured && user ? <Navigate to="/home" replace /> : <AuthPage />
+          isConfigured && (user || guestMode)
+            ? <Navigate to="/home" replace />
+            : <AuthPage />
         }
       />
-      <Route
-        path="/home"
-        element={
-          <ProtectedRoute><HomePage /></ProtectedRoute>
-        }
-      />
-      <Route
-        path="/lobby/:roomCode"
-        element={
-          <ProtectedRoute><LobbyPage /></ProtectedRoute>
-        }
-      />
-      <Route
-        path="/game/:roomCode"
-        element={
-          <ProtectedRoute><GamePage /></ProtectedRoute>
-        }
-      />
+      <Route path="/home" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="/casual" element={<ProtectedRoute><CasualPage /></ProtectedRoute>} />
+      <Route path="/ranked" element={<ProtectedRoute><RankedPage /></ProtectedRoute>} />
+      <Route path="/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
+      <Route path="/lobby/:roomCode" element={<ProtectedRoute><LobbyPage /></ProtectedRoute>} />
+      <Route path="/game/:roomCode" element={<ProtectedRoute><GamePage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -11,6 +11,8 @@ export function useGameState(socket, on) {
   const [checkCallInfo, setCheckCallInfo] = useState(null);
   const [gameOver, setGameOver] = useState(null);
   const [lastCardPlayed, setLastCardPlayed] = useState(null);
+  const [exposedSlot, setExposedSlot] = useState(null);
+  const exposedSlotTimerRef = useRef(null);
 
   useEffect(() => {
     if (!on) return;
@@ -43,6 +45,15 @@ export function useGameState(socket, on) {
         setLastReactionResult(result);
         setTimeout(() => setLastReactionResult(null), REACTION_REVEAL_MS);
 
+        if (result.exposedSlot) {
+          if (exposedSlotTimerRef.current) clearTimeout(exposedSlotTimerRef.current);
+          setExposedSlot(result.exposedSlot);
+          exposedSlotTimerRef.current = setTimeout(() => {
+            setExposedSlot(null);
+            exposedSlotTimerRef.current = null;
+          }, REACTION_REVEAL_MS);
+        }
+
         const cards = result.revealCards?.filter((c) => c?.rank != null) ?? [];
         if (cards.length > 0) {
           if (revealClearRef.current) clearTimeout(revealClearRef.current);
@@ -69,12 +80,18 @@ export function useGameState(socket, on) {
         if (revealClearRef.current) clearTimeout(revealClearRef.current);
         revealClearRef.current = null;
         setReactionCardReveal(null);
+        if (exposedSlotTimerRef.current) clearTimeout(exposedSlotTimerRef.current);
+        exposedSlotTimerRef.current = null;
+        setExposedSlot(null);
       }),
 
       on('returned-to-lobby', () => {
         if (revealClearRef.current) clearTimeout(revealClearRef.current);
         revealClearRef.current = null;
         setReactionCardReveal(null);
+        if (exposedSlotTimerRef.current) clearTimeout(exposedSlotTimerRef.current);
+        exposedSlotTimerRef.current = null;
+        setExposedSlot(null);
         setGameState(null);
         setGameOver(null);
         setReactionWindow(null);
@@ -87,6 +104,10 @@ export function useGameState(socket, on) {
         clearTimeout(revealClearRef.current);
         revealClearRef.current = null;
       }
+      if (exposedSlotTimerRef.current) {
+        clearTimeout(exposedSlotTimerRef.current);
+        exposedSlotTimerRef.current = null;
+      }
       unsubs.forEach((unsub) => unsub?.());
     };
   }, [on]);
@@ -95,6 +116,9 @@ export function useGameState(socket, on) {
     if (revealClearRef.current) clearTimeout(revealClearRef.current);
     revealClearRef.current = null;
     setReactionCardReveal(null);
+    if (exposedSlotTimerRef.current) clearTimeout(exposedSlotTimerRef.current);
+    exposedSlotTimerRef.current = null;
+    setExposedSlot(null);
     setGameState(null);
     setReactionWindow(null);
     setLastReactionResult(null);
@@ -111,6 +135,7 @@ export function useGameState(socket, on) {
     checkCallInfo,
     gameOver,
     lastCardPlayed,
+    exposedSlot,
     reset,
   };
 }

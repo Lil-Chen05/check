@@ -7,6 +7,9 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [guestMode, setGuestModeState] = useState(
+    () => sessionStorage.getItem('guestMode') === 'true'
+  );
 
   useEffect(() => {
     if (!supabase) {
@@ -60,6 +63,15 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
+    sessionStorage.removeItem('guestMode');
+    sessionStorage.removeItem('guestId');
+    sessionStorage.removeItem('guestName');
+    setGuestModeState(false);
+  }, []);
+
+  const playAsGuest = useCallback(() => {
+    sessionStorage.setItem('guestMode', 'true');
+    setGuestModeState(true);
   }, []);
 
   const getToken = useCallback(async () => {
@@ -68,14 +80,22 @@ export function AuthProvider({ children }) {
     return data.session?.access_token ?? null;
   }, []);
 
+  const refreshProfile = useCallback(async () => {
+    if (!supabase || !user) return;
+    await fetchProfile(user.id);
+  }, [user]);
+
   const value = {
     user,
     profile,
     loading,
+    guestMode,
     signUp,
     signIn,
     signOut,
+    playAsGuest,
     getToken,
+    refreshProfile,
     isConfigured: !!supabase,
   };
 

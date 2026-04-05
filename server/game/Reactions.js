@@ -213,12 +213,6 @@ export function handleStealReaction(gameState, reactorId, targetPlayerId, target
     reactor.hand.push(penaltyCard);
   }
 
-  if (!isMatch) {
-    victim.hand.splice(targetCardIndex, 1);
-    victim.knownCardIds.delete(prospectCard.id);
-    reactor.hand.push(prospectCard);
-  }
-
   return {
     success: true,
     correct: false,
@@ -227,9 +221,10 @@ export function handleStealReaction(gameState, reactorId, targetPlayerId, target
     penalty: true,
     penaltyCard: penaltyCard ? { id: penaltyCard.id } : null,
     reason: !isMatch
-      ? 'Wrong card — it joins your hand and you draw a penalty'
+      ? 'Wrong card — penalty card drawn'
       : 'Too slow — someone reacted first',
     revealCards: prospectReveal,
+    exposedSlot: !isMatch ? { playerId: targetPlayerId, cardIndex: targetCardIndex } : null,
   };
 }
 

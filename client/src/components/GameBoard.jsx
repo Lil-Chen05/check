@@ -27,6 +27,7 @@ export default function GameBoard({
   onStartQueuedPower,
   pendingStealGive,
   logEntries = [],
+  exposedSlot = null,
   /** @type {{ pileHighlightCardId: string|null, slotPulses: Array<{playerId: string, index: number, tone?: string}>, holdingHighlight: boolean, pairSwap: object|null, drawHandSwap: object|null }} */
   tableFeedback = {
     pileHighlightCardId: null,
@@ -317,6 +318,7 @@ export default function GameBoard({
               drawHandSwap={tableFeedback.drawHandSwap}
               optimisticPowerSecond={optimisticPowerSecond}
               optimisticDrawHandIndex={null}
+              exposedSlot={exposedSlot}
               size={handSize}
             />
           ))}
@@ -515,6 +517,7 @@ export default function GameBoard({
             drawHandSwap={tableFeedback.drawHandSwap}
             optimisticPowerSecond={optimisticPowerSecond}
             optimisticDrawHandIndex={optimisticDrawSlot}
+            exposedSlot={exposedSlot}
             size={handSize}
           />
         )}

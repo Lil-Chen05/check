@@ -61,6 +61,7 @@ export default function reactionHandlers(io, socket, rooms) {
       revealCards: result.revealCards ?? [],
       needStealGive: result.needStealGive,
       stealGiveCompleted: result.stealGiveCompleted,
+      exposedSlot: result.exposedSlot ?? null,
     });
 
     if (result.needStealGive) {

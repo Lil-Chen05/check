@@ -31,6 +31,7 @@ export default function GamePage() {
     checkCallInfo,
     gameOver,
     lastCardPlayed,
+    exposedSlot,
   } = useGameState(null, on);
 
   const tableFeedback = useTableFeedback(gameState);
@@ -188,6 +189,7 @@ export default function GamePage() {
         onStartQueuedPower={handleStartQueuedPower}
         pendingStealGive={gameState.pendingStealGive}
         logEntries={logEntries}
+        exposedSlot={exposedSlot}
       />
 
       <ReactionOverlay
