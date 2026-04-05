@@ -128,6 +128,15 @@ export default function LobbyPage() {
             {!isHost && (
               <p className="text-center text-antique-gold-700/50 text-sm mt-4 italic">Waiting for host to start the game...</p>
             )}
+
+            <div className="text-center mt-3">
+              <button
+                onClick={() => navigate('/rules')}
+                className="text-xs text-antique-gold-700/40 hover:text-antique-gold-600/65 transition-colors underline"
+              >
+                How to Play
+              </button>
+            </div>
           </div>
         </div>
       </div>

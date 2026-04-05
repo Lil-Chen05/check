@@ -20,6 +20,12 @@ export default function Header() {
       </button>
 
       <div className="flex items-center gap-4">
+        <button
+          onClick={() => navigate('/rules')}
+          className="text-sm text-antique-gold-700/55 hover:text-antique-gold-400 transition-colors hidden sm:block"
+        >
+          How to Play
+        </button>
         {profile && (
           <div className="text-right hidden sm:block">
             <p className="text-sm text-white font-medium">{profile.display_name}</p>

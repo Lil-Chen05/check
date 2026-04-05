@@ -5,6 +5,7 @@ import DashboardPage from './pages/DashboardPage';
 import CasualPage from './pages/CasualPage';
 import RankedPage from './pages/RankedPage';
 import LeaderboardPage from './pages/LeaderboardPage';
+import RulesPage from './pages/RulesPage';
 import LobbyPage from './pages/LobbyPage';
 import GamePage from './pages/GamePage';
 
@@ -42,6 +43,7 @@ function AppRoutes() {
       <Route path="/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
       <Route path="/lobby/:roomCode" element={<ProtectedRoute><LobbyPage /></ProtectedRoute>} />
       <Route path="/game/:roomCode" element={<ProtectedRoute><GamePage /></ProtectedRoute>} />
+      <Route path="/rules" element={<RulesPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
