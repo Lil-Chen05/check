@@ -82,10 +82,9 @@ Each player gets **exactly one reaction attempt per card played**.
 ### Stealing From an Opponent
 
 1. If you believe a specific face-down card in another player's hand matches the rank just played, you may grab it and play it.
-2. If correct: the card is played, and you give any one of your own face-down cards to the victim.
-   - You end up with one fewer card net.
+2. If correct: the card is played onto the pile, and you give any one of your own face-down cards to the victim. You end up with one fewer card net.
 3. If the stolen card is a power card, the **THIEF** controls and benefits from the power.
-4. If incorrect: return the card and draw a penalty card.
+4. **If incorrect:** the grabbed card is returned to its **original position** in the opponent's hand, and the thief draws **one penalty card** from the draw deck. The thief does **not** keep the incorrectly identified card — it goes straight back to the opponent.
 
 ### Additional Reaction Rules
 
@@ -113,7 +112,7 @@ If the draw deck runs out:
 
 ### Calling Check
 
-At the **START of your turn** before drawing, you may call **“Check”** if you believe you have the lowest total points.
+At the **START of your turn** before drawing, you may call **"Check"** if you believe you have the lowest total points.
 
 After calling Check:
 
@@ -131,14 +130,15 @@ After calling Check:
 ## Lobby & Room System
 
 1. Players can play via a lobby using room codes.
-2. From the main menu, a player can either **Create a Room** or **Join a Room** with a code.
+2. From the dashboard, a player chooses **Casual** mode, then either **Create a Room** or **Join a Room** with a code.
 3. Rooms have a unique **6-character** join code that is easy to share.
 4. The room creator is the host and can start the game once **3–12 players** have joined.
 5. The lobby shows all connected players waiting.
 6. After a game ends, all players return to the lobby and the host can start a new game.
-7. **Win tracking (optional):**
-   - Account login via Supabase Auth is available, but **guests can play now**.
-   - Win tracking is stored when Supabase is configured; otherwise, gameplay still works for guests.
+7. **Accounts & Stats:**
+   - Players can sign up or sign in with Supabase Auth.
+   - Signed-in players have their wins, games played, and points tracked automatically after every game.
+   - Guests can play without an account but are not tracked and do not appear on the leaderboard.
 
 ## Real-Time Reaction Mechanic Implementation Notes
 
@@ -151,4 +151,3 @@ This is the most technically complex feature. Implement it as follows:
 5. The server then emits the result to all players (success or failure with penalty).
 6. Reactions are closed once the window expires or the first valid reaction is processed.
 7. The active player can also react to their own played card — this is valid and intentional.
-
