@@ -68,7 +68,7 @@ export default function Card({
           : powerEmeraldHighlight
             ? 'ring-2 ring-emerald-400/90 shadow-[0_0_16px_rgba(52,211,153,0.5)]'
             : highlight
-              ? 'ring-2 ring-gold-400 shadow-glow'
+              ? 'ring-2 ring-antique-gold-600 shadow-glow'
               : ''}
         ${className}
       `}
@@ -78,12 +78,12 @@ export default function Card({
           {isJoker ? (
             <div className="flex flex-col items-center justify-center h-full">
               <span className="text-purple-600 text-2xl">★</span>
-              <span className="text-purple-600 font-bold text-[10px] mt-0.5">JOKER</span>
+              <span className="text-purple-700 font-body font-medium text-[9px] mt-0.5 tracking-widest uppercase">JOKER</span>
             </div>
           ) : (
             <>
               <div className={`flex flex-col items-start leading-none ${getSuitColor(card.suit)}`}>
-                <span className="font-bold">{getDisplayRank(card.rank)}</span>
+                <span className="font-display font-semibold leading-none">{getDisplayRank(card.rank)}</span>
                 <span className="text-[10px]">{getSuitSymbol(card.suit)}</span>
               </div>
               <div className={`text-center text-2xl ${getSuitColor(card.suit)}`}>
@@ -97,9 +97,9 @@ export default function Card({
           )}
         </div>
       ) : (
-        <div className="absolute inset-0 rounded-lg card-back-pattern border-2 border-gold-600/20">
-          <div className="absolute inset-2 rounded border border-gold-600/15 flex items-center justify-center">
-            <span className="text-gold-600/30 font-display font-bold text-lg">C</span>
+        <div className="absolute inset-0 rounded-lg card-back-pattern border border-antique-gold-700/25">
+          <div className="absolute inset-[5px] rounded border border-antique-gold-700/18 flex items-center justify-center">
+            <span className="text-antique-gold-600/25 font-display italic text-xl tracking-[0.1em]">C</span>
           </div>
         </div>
       )}

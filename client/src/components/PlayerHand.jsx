@@ -1,4 +1,4 @@
-import { AnimatePresence, LayoutGroup } from 'framer-motion';
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import Card from './Card';
 
 function slotBoxClass(size) {
@@ -42,6 +42,7 @@ export default function PlayerHand({
   const cardSize = size === 'lg' ? 'lg' : size === 'sm' ? 'sm' : size === 'xs' ? 'xs' : 'md';
   const gap = size === 'xs' ? 'gap-1' : size === 'sm' ? 'gap-1.5' : 'gap-2';
 
+  const reduceMotion = useReducedMotion();
   const isPeekedHere =
     blackKingPeekedSlot?.playerId === player.id && blackKingPeekedSlot != null;
 
@@ -50,15 +51,15 @@ export default function PlayerHand({
 
   const headerInner = (
     <>
-      <div className={`w-2 h-2 rounded-full ${player.connected !== false ? 'bg-emerald-400' : 'bg-gray-600'}`} />
+      <div className={`w-2 h-2 rounded-full ${player.connected !== false ? 'bg-jade-600' : 'bg-gray-600'}`} />
       <span className={`text-sm font-medium truncate max-w-[100px] ${
-        isActive ? 'text-gold-400' : isMe ? 'text-emerald-300' : 'text-gray-300'
+        isActive ? 'text-antique-gold-400' : isMe ? 'text-jade-600/90' : 'text-gray-300'
       }`}>
         {player.displayName}
         {isMe && ' (You)'}
       </span>
       {isActive && (
-        <span className="text-[10px] text-gold-400 bg-gold-400/10 rounded-full px-1.5 py-0.5 animate-pulse">
+        <span className="text-[10px] text-antique-gold-400 bg-antique-gold-600/12 rounded-full px-1.5 py-0.5 animate-pulse">
           Turn
         </span>
       )}
@@ -71,8 +72,8 @@ export default function PlayerHand({
         <button
           type="button"
           onClick={() => onRedKingSelect(player.id)}
-          className="flex items-center gap-1.5 mb-1 px-2 py-1 rounded-lg border border-gold-600/30 bg-black/20
-                     hover:border-amber-400/60 hover:bg-black/40 transition-all cursor-pointer min-h-[44px]"
+          className="flex items-center gap-1.5 mb-1 px-2 py-1 rounded-lg border border-antique-gold-700/30 bg-midnight-800/20
+                     hover:border-antique-gold-500/60 hover:bg-midnight-800/40 transition-all cursor-pointer min-h-[44px]"
         >
           {headerInner}
         </button>
@@ -84,7 +85,7 @@ export default function PlayerHand({
 
       <LayoutGroup id={`hand-${player.id}`}>
         <div
-          className={`flex flex-row items-end ${gap} rounded-xl border border-white/10 bg-black/10 px-2 py-2`}
+          className={`flex flex-row items-end ${gap} rounded-xl border border-antique-gold-700/12 bg-midnight-900/30 px-2 py-2`}
         >
           <AnimatePresence mode="popLayout">
             {cards.map((card, index) => {
@@ -143,13 +144,24 @@ export default function PlayerHand({
               return (
                 <div
                   key={card.id}
+                  data-slot-player={player.id}
+                  data-slot-index={index}
                   className={`flex flex-col items-center gap-0.5 shrink-0 rounded-md transition-shadow duration-300 ${
                     slotPulseAmber
                       ? 'ring-2 ring-amber-400/90 ring-offset-2 ring-offset-black/40 shadow-[0_0_12px_rgba(251,191,36,0.45)]'
                       : ''
                   }`}
                 >
-                  <div className="relative inline-flex shrink-0 rounded-lg">
+                  {/* Peek lift: card briefly floats up when a Jack/Black-King peek fires on this slot */}
+                  <motion.div
+                    animate={
+                      slotPulseEmerald && !reduceMotion
+                        ? { y: -9, scale: 1.07 }
+                        : { y: 0, scale: 1 }
+                    }
+                    transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+                    className="relative inline-flex shrink-0 rounded-lg"
+                  >
                     {swapOverlayClass ? (
                       <div
                         className={`absolute inset-0 z-[2] rounded-lg ${swapOverlayClass}`}
@@ -183,8 +195,8 @@ export default function PlayerHand({
                       }
                       disabled={!onCardClick || isPeekedCard}
                     />
-                  </div>
-                  <span className="text-[9px] text-gray-500 tabular-nums leading-none">{index + 1}</span>
+                  </motion.div>
+                  <span className="text-[9px] text-antique-gold-700/35 tabular-nums leading-none">{index + 1}</span>
                 </div>
               );
             })}
@@ -196,9 +208,9 @@ export default function PlayerHand({
               return (
                 <div key={`slot-${slotNum}`} className="flex flex-col items-center gap-0.5 shrink-0">
                   <div
-                    className={`${box} rounded-lg border border-dashed border-white/12 bg-black/5 flex items-center justify-center`}
+                    className={`${box} rounded-lg border border-dashed border-antique-gold-700/15 bg-midnight-900/15 flex items-center justify-center`}
                   />
-                  <span className="text-[9px] text-gold-600/35 tabular-nums leading-none">{slotNum}</span>
+                  <span className="text-[9px] text-antique-gold-700/25 tabular-nums leading-none">{slotNum}</span>
                 </div>
               );
             })}

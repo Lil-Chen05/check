@@ -11,10 +11,10 @@ export default function Header() {
   };
 
   return (
-    <header className="h-16 flex items-center justify-between px-6 border-b border-white/5 bg-black/20">
+    <header className="h-16 flex items-center justify-between px-6 border-b border-antique-gold-700/15 bg-midnight-950/80 backdrop-blur-sm">
       <button
         onClick={() => navigate('/home')}
-        className="font-display text-2xl font-bold text-gold-400 hover:text-gold-300 transition-colors"
+        className="font-display text-2xl font-semibold text-antique-gold-400 hover:text-antique-gold-300 transition-colors tracking-display"
       >
         Check
       </button>
@@ -23,7 +23,7 @@ export default function Header() {
         {profile && (
           <div className="text-right hidden sm:block">
             <p className="text-sm text-white font-medium">{profile.display_name}</p>
-            <p className="text-xs text-gray-500">{profile.wins}W / {profile.games_played}G</p>
+            <p className="text-xs text-antique-gold-700/60">{profile.wins}W / {profile.games_played}G</p>
           </div>
         )}
         {isConfigured && user && (

@@ -31,9 +31,15 @@ export function resolveQueen(gameState, playerId, pos1, pos2) {
   return { success: true };
 }
 
+/** Keep in sync with MAX_HAND_FOR_STEAL_REACT in Reactions.js */
+const MAX_HAND_SIZE = 7;
+
 export function resolveRedKing(gameState, playerId, targetPlayerId) {
   const targetPlayer = gameState.getPlayer(targetPlayerId);
   if (!targetPlayer) return { error: 'Target player not found' };
+  if (targetPlayer.hand.length >= MAX_HAND_SIZE) {
+    return { error: 'That player already has 7 cards' };
+  }
 
   gameState.ensureDrawDeck();
   if (gameState.drawDeck.length === 0) return { error: 'No cards in deck' };

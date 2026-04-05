@@ -1,9 +1,11 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import PlayerHand from './PlayerHand';
 import DrawPile from './DrawPile';
 import PlayPile from './PlayPile';
 import Card from './Card';
+import SwapArc from './SwapArc';
+import EventLog from './EventLog';
 import { useCompactTableLayout } from '../hooks/useCompactTableLayout';
 
 /** Keep in sync with server/game/Reactions.js MAX_HAND_FOR_STEAL_REACT */
@@ -24,6 +26,7 @@ export default function GameBoard({
   onResolvePower,
   onStartQueuedPower,
   pendingStealGive,
+  logEntries = [],
   /** @type {{ pileHighlightCardId: string|null, slotPulses: Array<{playerId: string, index: number, tone?: string}>, holdingHighlight: boolean, pairSwap: object|null, drawHandSwap: object|null }} */
   tableFeedback = {
     pileHighlightCardId: null,
@@ -35,6 +38,7 @@ export default function GameBoard({
 }) {
   const reduceMotion = useReducedMotion();
   const compactTable = useCompactTableLayout();
+  const containerRef = useRef(null);
   const handSize = compactTable ? 'xs' : 'sm';
 
   const {
@@ -86,6 +90,18 @@ export default function GameBoard({
     if (drawnCard == null) setOptimisticDrawSlot(null);
   }, [drawnCard]);
 
+  // Brief "Your turn" flash when the turn first arrives
+  const [showTurnFlash, setShowTurnFlash] = useState(false);
+  const prevIsMyTurnRef = useRef(false);
+  useEffect(() => {
+    if (isMyTurn && !prevIsMyTurnRef.current && !reduceMotion) {
+      setShowTurnFlash(true);
+      const t = setTimeout(() => setShowTurnFlash(false), 1600);
+      return () => clearTimeout(t);
+    }
+    prevIsMyTurnRef.current = isMyTurn;
+  }, [isMyTurn, reduceMotion]);
+
   useEffect(() => {
     if (!optimisticPowerSecond) return undefined;
     const t = setTimeout(() => setOptimisticPowerSecond(null), 2500);
@@ -106,6 +122,7 @@ export default function GameBoard({
   const canPeek = phase === 'setup-peek' && me && !me.hasPeeked;
   const canCheck =
     isMyTurn && phase === 'turn-draw' && !checkCaller && !queuedPowerControllerName;
+  const powerPending = !!queuedPowerControllerName;
 
   const redKingPicking = isPowerController && powerType === 'red-king';
 
@@ -269,7 +286,13 @@ export default function GameBoard({
   const showActionColumn = showReactionControls || showSharedPlayCheckSlot;
 
   return (
-    <div className="flex flex-col h-full min-h-0 min-w-0">
+    <div ref={containerRef} className="relative flex flex-col h-full min-h-0 min-w-0">
+      {/* Swap arc — SVG connecting line between the two slots involved in a power swap */}
+      <SwapArc pairSwap={tableFeedback.pairSwap} containerRef={containerRef} />
+
+      {/* Floating event log — top-right, fades in/out */}
+      <EventLog entries={logEntries} />
+
       {/* Opponents — scrollable so field + hand stay reachable on mobile */}
       <div
         className="flex-1 min-h-0 min-w-0 w-full max-w-full overflow-y-auto overflow-x-hidden overscroll-y-contain px-3 sm:px-4 pt-3 pb-2 [scrollbar-gutter:stable]"
@@ -301,12 +324,12 @@ export default function GameBoard({
       </div>
 
       {/* Piles + holding + 2x2 actions; vertical-only scroll elsewhere */}
-      <div className="flex-shrink-0 border-t border-white/5 bg-black/10 w-full max-w-full min-w-0 overflow-x-hidden">
+      <div className="flex-shrink-0 border-t border-antique-gold-700/12 bg-midnight-950/40 w-full max-w-full min-w-0 overflow-x-hidden">
         <div className="flex flex-col items-stretch gap-2 px-2 sm:px-4 py-2 w-full min-w-0 max-w-full">
           {checkNoticeText && (
             <p
               className="text-[11px] sm:text-xs px-2.5 py-1.5 rounded-lg text-center w-full max-w-md mx-auto
-                         border border-rose-500/25 bg-rose-950/35 text-rose-100/90 leading-snug"
+                         border border-crimson-700/35 bg-crimson-950/50 text-crimson-400/90 leading-snug"
               role="status"
             >
               {checkNoticeText}
@@ -318,7 +341,7 @@ export default function GameBoard({
               <DrawPile
                 count={drawDeckCount}
                 onClick={onDrawCard}
-                disabled={!canDraw}
+                disabled={!canDraw || powerPending}
                 canDraw={canDraw}
               />
 
@@ -327,8 +350,8 @@ export default function GameBoard({
                 reactionHint={reactionOpen}
                 reactionArmed={effectiveReact}
                 count={playPileCount}
-                canTakeFromPile={canTakeFromPile}
-                onTakeFromPile={canTakeFromPile ? () => onTakeFromPile?.() : undefined}
+                canTakeFromPile={canTakeFromPile && !powerPending}
+                onTakeFromPile={(canTakeFromPile && !powerPending) ? () => onTakeFromPile?.() : undefined}
                 highlightCardId={tableFeedback.pileHighlightCardId}
                 reduceMotion={reduceMotion}
               />
@@ -354,7 +377,7 @@ export default function GameBoard({
                       motionPreset="interactive"
                       enableLayout={false}
                     />
-                    <span className="text-xs text-gray-400">Holding</span>
+                    <span className="text-xs text-antique-gold-700/55 font-light">Holding</span>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -438,18 +461,33 @@ export default function GameBoard({
         </div>
       </div>
 
-      {/* Phase indicator */}
+      {/* Phase indicator + your-turn flash */}
       <div className="flex-shrink-0 text-center py-2">
         <AnimatePresence mode="wait">
-          <motion.div
-            key={phaseLabel}
-            initial={reduceMotion ? false : { opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reduceMotion ? undefined : { opacity: 0, y: -5 }}
-            className="text-sm text-emerald-300/80 font-medium px-2"
-          >
-            {phaseLabel}
-          </motion.div>
+          {showTurnFlash ? (
+            <motion.div
+              key="turn-flash"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="inline-block text-xs font-medium tracking-wider
+                         text-antique-gold-400 bg-jade-950/70 border border-jade-700/40
+                         rounded-full px-3 py-1"
+            >
+              ✦ Your Turn
+            </motion.div>
+          ) : (
+            <motion.div
+              key={phaseLabel}
+              initial={reduceMotion ? false : { opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduceMotion ? undefined : { opacity: 0, y: -5 }}
+              className="text-sm text-antique-gold-600/70 font-light px-2"
+            >
+              {phaseLabel}
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 

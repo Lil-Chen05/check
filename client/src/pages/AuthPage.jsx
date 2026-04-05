@@ -43,20 +43,21 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen felt-bg flex items-center justify-center p-4">
+      <div className="noise-overlay" aria-hidden="true" />
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
-          <h1 className="font-display text-6xl font-extrabold text-gold-400 tracking-tight mb-2">
+          <h1 className="font-display text-6xl font-semibold text-antique-gold-400 tracking-display mb-2 animate-shimmer">
             Check
           </h1>
-          <p className="text-emerald-300/70 text-lg">Multiplayer Card Game</p>
+          <p className="text-antique-gold-600/50 text-base font-light">Multiplayer Card Game</p>
         </div>
 
-        <div className="bg-black/30 backdrop-blur-sm rounded-2xl border border-gold-600/20 p-8 shadow-2xl">
-          <div className="flex mb-6 bg-black/20 rounded-lg p-1">
+        <div className="panel p-8">
+          <div className="flex mb-6 bg-midnight-950/50 rounded-lg p-1">
             <button
               onClick={() => { setIsSignUp(false); setError(''); }}
               className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${
-                !isSignUp ? 'bg-emerald-600 text-white shadow' : 'text-gray-400 hover:text-white'
+                !isSignUp ? 'bg-jade-900 text-antique-gold-300 shadow border border-jade-700/50' : 'text-antique-gold-700/60 hover:text-antique-gold-400'
               }`}
             >
               Sign In
@@ -64,7 +65,7 @@ export default function AuthPage() {
             <button
               onClick={() => { setIsSignUp(true); setError(''); }}
               className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${
-                isSignUp ? 'bg-emerald-600 text-white shadow' : 'text-gray-400 hover:text-white'
+                isSignUp ? 'bg-jade-900 text-antique-gold-300 shadow border border-jade-700/50' : 'text-antique-gold-700/60 hover:text-antique-gold-400'
               }`}
             >
               Sign Up
@@ -101,7 +102,7 @@ export default function AuthPage() {
             />
 
             {error && (
-              <p className="text-red-400 text-sm bg-red-400/10 rounded-lg px-3 py-2">{error}</p>
+              <p className="text-crimson-400 text-sm bg-crimson-950/60 rounded-lg px-3 py-2 border border-crimson-700/30">{error}</p>
             )}
 
             <button type="submit" className="btn-primary w-full" disabled={loading}>
@@ -110,8 +111,8 @@ export default function AuthPage() {
           </form>
 
           {!isConfigured && (
-            <div className="mt-6 pt-4 border-t border-white/10">
-              <p className="text-xs text-gray-500 mb-3 text-center">
+            <div className="mt-6 pt-4 border-t border-antique-gold-700/15">
+              <p className="text-xs text-antique-gold-700/55 mb-3 text-center">
                 Supabase not configured — play without an account
               </p>
               <button onClick={handleSkipAuth} className="btn-secondary w-full text-sm">

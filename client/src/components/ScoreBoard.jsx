@@ -9,6 +9,7 @@ export default function ScoreBoard({ scores, myId, onReturnToLobby }) {
 
   return (
     <div className="min-h-screen felt-bg flex items-center justify-center p-4">
+      <div className="noise-overlay" aria-hidden="true" />
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -20,32 +21,33 @@ export default function ScoreBoard({ scores, myId, onReturnToLobby }) {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <h2 className="font-display text-5xl text-gold-400 mb-2">Game Over</h2>
-            <p className="text-emerald-300 text-lg">
+            <h2 className="font-display text-5xl text-antique-gold-400 mb-2 tracking-display">Game Over</h2>
+            <p className="text-antique-gold-600/70 text-base font-light">
               {winner.displayName} wins with {winner.points} point{winner.points !== 1 ? 's' : ''}!
             </p>
           </motion.div>
         </div>
 
-        <div className="bg-black/30 backdrop-blur-sm rounded-2xl border border-gold-600/20 overflow-hidden">
+        <hr className="gold-rule my-6" />
+        <div className="panel overflow-hidden">
           {scores.map((player, idx) => (
             <motion.div
               key={player.id}
               initial={{ x: -30, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.1 * idx + 0.5 }}
-              className={`flex items-center gap-4 px-6 py-4 border-b border-white/5 last:border-b-0 ${
-                idx === 0 ? 'bg-gold-400/10' : ''
-              } ${player.id === myId ? 'ring-1 ring-inset ring-emerald-400/30' : ''}`}
+              className={`flex items-center gap-4 px-6 py-4 border-b border-antique-gold-700/10 last:border-b-0 ${
+                idx === 0 ? 'bg-antique-gold-600/8' : ''
+              } ${player.id === myId ? 'ring-1 ring-inset ring-jade-700/50' : ''}`}
             >
               <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
                 idx === 0
-                  ? 'bg-gold-500 text-black'
+                  ? 'bg-antique-gold-600 text-midnight-950'
                   : idx === 1
-                    ? 'bg-gray-400 text-black'
+                    ? 'bg-gray-400 text-midnight-950'
                     : idx === 2
-                      ? 'bg-amber-700 text-white'
-                      : 'bg-gray-700 text-gray-300'
+                      ? 'bg-[#92400e] text-antique-gold-300'
+                      : 'bg-midnight-700 text-gray-400'
               }`}>
                 {idx + 1}
               </div>
@@ -54,7 +56,7 @@ export default function ScoreBoard({ scores, myId, onReturnToLobby }) {
                 <div className="flex items-center gap-2">
                   <span className="text-white font-medium truncate">{player.displayName}</span>
                   {player.id === myId && (
-                    <span className="text-xs text-emerald-400 bg-emerald-400/10 rounded-full px-2 py-0.5">You</span>
+                    <span className="text-xs text-jade-600 bg-jade-900/30 rounded-full px-2 py-0.5 border border-jade-700/30">You</span>
                   )}
                 </div>
 
@@ -77,11 +79,11 @@ export default function ScoreBoard({ scores, myId, onReturnToLobby }) {
 
               <div className="text-right flex-shrink-0">
                 <div className={`text-2xl font-bold ${
-                  idx === 0 ? 'text-gold-400' : 'text-gray-300'
+                  idx === 0 ? 'text-antique-gold-400 font-display' : 'text-gray-400'
                 }`}>
                   {player.points}
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-antique-gold-700/55">
                   {player.cardCount} card{player.cardCount !== 1 ? 's' : ''}
                 </div>
               </div>
@@ -90,7 +92,7 @@ export default function ScoreBoard({ scores, myId, onReturnToLobby }) {
         </div>
 
         <div className="mt-6 text-center">
-          <button onClick={onReturnToLobby} className="btn-primary text-lg px-8">
+          <button onClick={onReturnToLobby} className="btn-primary text-base px-8 tracking-wide">
             Return to Lobby
           </button>
         </div>

@@ -17,7 +17,7 @@ export default class GameState {
     }));
     this.drawDeck = [];
     this.playPile = [];
-    this.currentPlayerIndex = 0;
+    this.currentPlayerIndex = Math.floor(Math.random() * players.length);
     this.phase = 'setup-peek';
     this.drawnCard = null;
     /** True when drawnCard came from the play pile — must swap, cannot play straight to pile. */
@@ -431,6 +431,13 @@ export default class GameState {
       nextIndex = (nextIndex + 1) % this.players.length;
       attempts++;
     }
+
+    // All players disconnected — end the game rather than stalling
+    if (!this.players[nextIndex].connected) {
+      this.phase = 'game-over';
+      return { gameOver: true, scores: this.getScores() };
+    }
+
     this.currentPlayerIndex = nextIndex;
     this.phase = 'turn-draw';
 

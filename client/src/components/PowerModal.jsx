@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 export default function PowerModal({ power, players, myId, onResolve }) {
   const [step, setStep] = useState(0);
   const [selection1, setSelection1] = useState(null);
   const [selection2, setSelection2] = useState(null);
+
+  // Reset selections when a new power starts (e.g. consecutive Queens)
+  useEffect(() => {
+    setSelection1(null);
+    setSelection2(null);
+  }, [power?.type, power?.controllerId]);
 
   if (!power) return null;
 
@@ -94,19 +100,28 @@ export default function PowerModal({ power, players, myId, onResolve }) {
       <h3 className="text-gold-400 font-display text-xl mb-1">Red King Power</h3>
       <p className="text-gray-400 text-sm mb-4">Choose a player to receive a new face-down card</p>
       <div className="flex flex-wrap gap-2 justify-center">
-        {players.map(p => (
-          <button
-            key={p.id}
-            onClick={() => onResolve({ targetPlayerId: p.id })}
-            className="px-4 py-3 bg-black/30 border border-gold-600/20 rounded-lg
-                       hover:border-gold-400 hover:shadow-glow transition-all cursor-pointer"
-          >
-            <span className="text-white font-medium text-sm">
-              {p.id === myId ? 'Yourself' : p.displayName}
-            </span>
-            <span className="text-xs text-gray-500 block">{p.cardCount} cards</span>
-          </button>
-        ))}
+        {players.map(p => {
+          const full = p.cardCount >= 7;
+          return (
+            <button
+              key={p.id}
+              disabled={full}
+              onClick={() => onResolve({ targetPlayerId: p.id })}
+              className={`px-4 py-3 bg-black/30 border rounded-lg transition-all
+                ${full
+                  ? 'border-gray-700/40 opacity-40 cursor-not-allowed'
+                  : 'border-gold-600/20 hover:border-gold-400 hover:shadow-glow cursor-pointer'
+                }`}
+            >
+              <span className="text-white font-medium text-sm">
+                {p.id === myId ? 'Yourself' : p.displayName}
+              </span>
+              <span className="text-xs text-gray-500 block">
+                {p.cardCount} cards{full ? ' — full' : ''}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

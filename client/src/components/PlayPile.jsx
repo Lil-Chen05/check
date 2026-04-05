@@ -49,7 +49,7 @@ export default function PlayPile({
               exit={reduceMotion ? undefined : { scale: 0.8, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               className={`rounded-lg transition-all duration-200 ${
-                canTop ? 'ring-2 ring-gold-400/50 shadow-glow' : ''
+                canTop ? 'ring-2 ring-antique-gold-600/60 shadow-glow' : ''
               } ${
                 highlightCardId && topCard.id === highlightCardId
                   ? 'ring-2 ring-amber-300/90 shadow-[0_0_16px_rgba(252,211,77,0.45)]'
@@ -62,18 +62,18 @@ export default function PlayPile({
             <div
               className={`w-[70px] h-[100px] rounded-lg border-2 border-dashed flex items-center justify-center transition-all duration-200 ${
                 canTop
-                  ? 'border-gold-400/50 shadow-glow'
-                  : 'border-white/10'
+                  ? 'border-antique-gold-600/60 shadow-glow'
+                  : 'border-antique-gold-700/15'
               }`}
             >
-              <span className="text-gray-600 text-xs">Pile</span>
+              <span className="text-antique-gold-700/40 text-xs">Pile</span>
             </div>
           )}
         </AnimatePresence>
       </div>
-      <span className="text-xs text-gray-400">Play Pile</span>
+      <span className="text-xs text-antique-gold-700/60">Play Pile</span>
       {canTop && (
-        <span className="text-xs text-gold-400 animate-pulse">Click to Top</span>
+        <span className="text-xs text-antique-gold-400/80 animate-pulse">Click to Top</span>
       )}
     </>
   );

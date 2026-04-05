@@ -51,14 +51,14 @@ export default function ReactionOverlay({ reactionWindow, lastResult, cardReveal
             exit={{ opacity: 0 }}
             className="absolute inset-0 z-[35] flex items-center justify-center pointer-events-none bg-black/40 backdrop-blur-[2px]"
           >
-            <div className="flex flex-col items-center gap-4 px-6 py-5 rounded-2xl bg-felt-900/95 border border-gold-500/40 shadow-2xl max-w-[95vw]">
-              <p className="text-gold-300 text-xs font-semibold tracking-widest uppercase">
+            <div className="flex flex-col items-center gap-4 px-6 py-5 rounded-2xl bg-midnight-900/95 border border-antique-gold-600/40 shadow-2xl max-w-[95vw]">
+              <p className="text-antique-gold-400 text-xs font-medium tracking-widest uppercase">
                 Revealed
               </p>
               <div className="flex flex-wrap justify-center gap-6">
                 {cardReveal.cards.map((c, i) => (
                   <div key={`${c.id ?? i}-${c.role ?? i}`} className="flex flex-col items-center gap-2">
-                    <span className="text-[10px] text-gold-500/80 uppercase tracking-wide">
+                    <span className="text-[10px] text-antique-gold-600/80 uppercase tracking-wide">
                       {ROLE_LABEL[c.role] || 'Card'}
                     </span>
                     <Card card={c} faceUp size="lg" motionPreset="static" enableLayout={false} />
@@ -98,8 +98,8 @@ export default function ReactionOverlay({ reactionWindow, lastResult, cardReveal
               lastResult.stealGiveCompleted ||
               lastResult.needStealGive ||
               (lastResult.correct && !lastResult.penalty)
-                ? 'bg-emerald-600/90 border-emerald-400/50 text-white'
-                : 'bg-red-600/90 border-red-400/50 text-white'
+                ? 'bg-jade-900/90 border-jade-700/50 text-antique-gold-300'
+                : 'bg-crimson-950/90 border-crimson-700/50 text-crimson-400'
             }`}
           >
             <div className="text-center">

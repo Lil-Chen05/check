@@ -119,6 +119,15 @@ function leaveCurrentRoom(io, socket, rooms) {
     if (player) {
       player.connected = false;
       player.socketId = null;
+
+      // Clean up abandoned games where every player has left
+      if (room.gameState.players.every(p => !p.connected)) {
+        rooms.delete(code);
+        socket.leave(code);
+        socket.roomCode = null;
+        return;
+      }
+
       broadcastGameState(io, room);
     }
   }

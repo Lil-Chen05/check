@@ -22,8 +22,8 @@
 @layer components {
   .felt-bg {
     background:
-      radial-gradient(ellipse at 50% 30%, rgba(22, 90, 54, 0.4) 0%, transparent 70%),
-      linear-gradient(180deg, #0a2e1a 0%, #0d3b22 50%, #0a2e1a 100%);
+      radial-gradient(ellipse at 50% 0%, rgba(45, 106, 79, 0.07) 0%, transparent 55%),
+      linear-gradient(160deg, #0e0e14 0%, #13131f 45%, #0e0e14 100%);
     background-attachment: fixed;
   }
 
@@ -42,38 +42,62 @@
   .card-back-pattern {
     background:
       repeating-linear-gradient(
-        45deg,
+        0deg,
         transparent,
-        transparent 6px,
-        rgba(212, 160, 23, 0.12) 6px,
-        rgba(212, 160, 23, 0.12) 7px
+        transparent 5px,
+        rgba(201, 168, 76, 0.055) 5px,
+        rgba(201, 168, 76, 0.055) 6px
       ),
       repeating-linear-gradient(
-        -45deg,
+        90deg,
         transparent,
-        transparent 6px,
-        rgba(212, 160, 23, 0.12) 6px,
-        rgba(212, 160, 23, 0.12) 7px
+        transparent 5px,
+        rgba(201, 168, 76, 0.055) 5px,
+        rgba(201, 168, 76, 0.055) 6px
       ),
-      linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+      linear-gradient(145deg, #101028 0%, #1a1a3e 45%, #0f0f28 100%);
   }
 
   .btn-primary {
-    @apply px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold
+    @apply px-6 py-3 bg-jade-900 hover:bg-jade-700 text-white font-medium
            rounded-lg shadow-lg hover:shadow-xl transition-all duration-200
-           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+           active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed
+           border border-jade-700/50 hover:border-jade-600/70;
   }
 
   .btn-secondary {
-    @apply px-6 py-3 bg-wood-700 hover:bg-wood-800 text-gold-200 font-semibold
+    @apply px-6 py-3 bg-midnight-800 hover:bg-midnight-700 text-antique-gold-400 font-medium
            rounded-lg shadow-lg hover:shadow-xl transition-all duration-200
-           active:scale-95 border border-gold-600/30;
+           active:scale-95 border border-antique-gold-600/40 hover:border-antique-gold-600/70;
   }
 
   .input-field {
-    @apply w-full px-4 py-3 bg-black/30 border border-gold-600/30 rounded-lg
-           text-white placeholder-gray-500 focus:outline-none focus:border-gold-500
-           focus:ring-1 focus:ring-gold-500/50 transition-colors;
+    @apply w-full px-4 py-3 bg-midnight-800/80 border border-antique-gold-700/30 rounded-lg
+           text-white placeholder-antique-gold-700/40 font-body
+           focus:outline-none focus:border-antique-gold-600 focus:ring-1 focus:ring-antique-gold-600/40
+           transition-colors;
+  }
+
+  /* Noise texture overlay */
+  .noise-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.028;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 200px 200px;
+  }
+
+  /* Gold gradient divider */
+  .gold-rule {
+    @apply w-full border-0 h-px bg-gradient-to-r from-transparent via-antique-gold-600/40 to-transparent;
+  }
+
+  /* Panel base — replaces ad-hoc bg-black/30 backdrop-blur-sm border border-gold-600/20 */
+  .panel {
+    @apply bg-midnight-900/80 backdrop-blur-md rounded-2xl border border-antique-gold-600/20 shadow-panel;
   }
 }
 
@@ -81,6 +105,10 @@
   .backface-hidden {
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+  }
+
+  .tracking-display {
+    letter-spacing: 0.04em;
   }
 
   /* Swap teaching: Queen / Black King — role A blue → red, role B red → blue */
@@ -106,25 +134,25 @@
 @keyframes swapBlueToRed {
   0% {
     box-shadow:
-      0 0 0 2px rgb(96 165 250),
+      0 0 0 2px rgba(96, 165, 250, 0.9),
       0 0 14px rgba(96, 165, 250, 0.55);
   }
   100% {
     box-shadow:
-      0 0 0 2px rgb(239 68 68),
-      0 0 12px rgba(239 68 68, 0.5);
+      0 0 0 2px rgba(239, 68, 68, 0.9),
+      0 0 12px rgba(239, 68, 68, 0.5);
   }
 }
 
 @keyframes swapRedToBlue {
   0% {
     box-shadow:
-      0 0 0 2px rgb(239 68 68),
+      0 0 0 2px rgba(239, 68, 68, 0.9),
       0 0 14px rgba(239, 68, 68, 0.55);
   }
   100% {
     box-shadow:
-      0 0 0 2px rgb(96 165 250),
+      0 0 0 2px rgba(96, 165, 250, 0.9),
       0 0 12px rgba(96, 165, 250, 0.5);
   }
 }

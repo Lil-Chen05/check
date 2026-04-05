@@ -41,8 +41,9 @@ export default function HomePage() {
   if (!isConfigured && !hasSetName) {
     return (
       <div className="min-h-screen felt-bg flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-black/30 backdrop-blur-sm rounded-2xl border border-gold-600/20 p-8">
-          <h2 className="font-display text-3xl text-gold-400 text-center mb-6">Choose a Name</h2>
+        <div className="noise-overlay" aria-hidden="true" />
+        <div className="w-full max-w-md panel p-8">
+          <h2 className="font-display text-3xl text-antique-gold-400 text-center mb-6 tracking-display">Choose a Name</h2>
           <input
             type="text"
             placeholder="Your display name"
@@ -94,23 +95,25 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen felt-bg">
+      <div className="noise-overlay" aria-hidden="true" />
       <Header />
       <div className="flex items-center justify-center p-4" style={{ minHeight: 'calc(100vh - 64px)' }}>
         <div className="w-full max-w-lg">
           <div className="text-center mb-10">
-            <h1 className="font-display text-5xl font-extrabold text-gold-400 mb-2">Check</h1>
-            <p className="text-emerald-300/60">
+            <h1 className="font-display text-6xl font-semibold text-antique-gold-400 mb-3 tracking-display animate-shimmer">Check</h1>
+            <p className="text-antique-gold-600/50 text-sm font-light">
               {connected
-                ? <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Connected</span>
-                : <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" /> Connecting...</span>
+                ? <span className="inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-jade-600" /> Connected</span>
+                : <span className="inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-crimson-500 animate-pulse" /> Connecting...</span>
               }
             </p>
           </div>
+          <hr className="gold-rule mb-8" />
 
           <div className="space-y-4">
             <button
               onClick={handleCreate}
-              className="btn-primary w-full text-lg py-4"
+              className="btn-primary w-full text-base py-4 tracking-wide"
               disabled={!connected || loading}
             >
               Create Room
@@ -118,10 +121,10 @@ export default function HomePage() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/10" />
+                <div className="w-full border-t border-antique-gold-700/20" />
               </div>
               <div className="relative flex justify-center">
-                <span className="bg-felt-900 px-4 text-sm text-gray-500">or join with code</span>
+                <span className="bg-midnight-950 px-4 text-xs text-antique-gold-600/40 uppercase tracking-widest">or join with code</span>
               </div>
             </div>
 
@@ -131,7 +134,7 @@ export default function HomePage() {
                 placeholder="Room code"
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                className="input-field flex-1 text-center text-lg tracking-[0.3em] uppercase"
+                className="input-field flex-1 text-center text-base tracking-[0.35em] uppercase font-display"
                 maxLength={6}
                 onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
               />
@@ -145,14 +148,14 @@ export default function HomePage() {
             </div>
 
             {error && (
-              <p className="text-red-400 text-sm bg-red-400/10 rounded-lg px-3 py-2 text-center">{error}</p>
+              <p className="text-crimson-400 text-sm bg-crimson-950/60 rounded-lg px-3 py-2 text-center border border-crimson-700/30">{error}</p>
             )}
           </div>
 
           {profile && (
-            <div className="mt-8 bg-black/20 rounded-xl p-4 border border-white/5 text-center">
+            <div className="mt-8 bg-midnight-800/40 rounded-xl p-4 border border-antique-gold-700/15 text-center">
               <p className="text-gray-400 text-sm">
-                Welcome back, <span className="text-gold-400 font-medium">{profile.display_name}</span>
+                Welcome back, <span className="text-antique-gold-400 font-medium">{profile.display_name}</span>
               </p>
               <p className="text-gray-500 text-xs mt-1">
                 {profile.wins} win{profile.wins !== 1 ? 's' : ''} · {profile.games_played} game{profile.games_played !== 1 ? 's' : ''} played

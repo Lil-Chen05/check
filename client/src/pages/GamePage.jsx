@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useSocket } from '../hooks/useSocket';
@@ -7,6 +7,7 @@ import GameBoard from '../components/GameBoard';
 import ReactionOverlay from '../components/ReactionOverlay';
 import ScoreBoard from '../components/ScoreBoard';
 import { useTableFeedback } from '../hooks/useTableFeedback';
+import { useEventLog } from '../hooks/useEventLog';
 
 export default function GamePage() {
   const { roomCode } = useParams();
@@ -33,8 +34,10 @@ export default function GamePage() {
   } = useGameState(null, on);
 
   const tableFeedback = useTableFeedback(gameState);
+  const logEntries = useEventLog(gameState, lastReactionResult);
 
   const [peekedCard, setPeekedCard] = useState(null);
+  const peekedCardTimerRef = useRef(null);
   const [actionError, setActionError] = useState('');
 
   useEffect(() => {
@@ -55,8 +58,9 @@ export default function GamePage() {
   const handlePeekCard = useCallback(async (cardIndex) => {
     const res = await emit('peek-card', { cardIndex });
     if (res?.card) {
+      if (peekedCardTimerRef.current) clearTimeout(peekedCardTimerRef.current);
       setPeekedCard({ ...res.card, cardIndex });
-      setTimeout(() => setPeekedCard(null), 2000);
+      peekedCardTimerRef.current = setTimeout(() => setPeekedCard(null), 2000);
     }
   }, [emit]);
 
@@ -119,8 +123,9 @@ export default function GamePage() {
   const handleResolvePower = useCallback(async (data) => {
     const res = await emit('resolve-power', data);
     if (res?.peekedCard) {
+      if (peekedCardTimerRef.current) clearTimeout(peekedCardTimerRef.current);
       setPeekedCard(res.peekedCard);
-      setTimeout(() => setPeekedCard(null), 2500);
+      peekedCardTimerRef.current = setTimeout(() => setPeekedCard(null), 2500);
     }
   }, [emit]);
 
@@ -142,7 +147,7 @@ export default function GamePage() {
   if (!gameState) {
     return (
       <div className="min-h-screen felt-bg flex items-center justify-center">
-        <div className="text-gold-400 text-xl animate-pulse">Loading game...</div>
+        <div className="text-antique-gold-400 text-xl animate-pulse font-display tracking-display">Loading game...</div>
       </div>
     );
   }
@@ -159,8 +164,9 @@ export default function GamePage() {
 
   return (
     <div className="h-screen felt-bg flex flex-col relative overflow-hidden">
+      <div className="noise-overlay" aria-hidden="true" />
       {actionError && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 max-w-md px-4 py-2 rounded-lg bg-amber-900/95 border border-amber-500/40 text-amber-100 text-sm text-center shadow-lg">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 max-w-md px-4 py-2 rounded-lg bg-midnight-800/95 backdrop-blur-sm border border-antique-gold-700/40 text-antique-gold-300 text-sm text-center shadow-panel">
           {actionError}
         </div>
       )}
@@ -181,6 +187,7 @@ export default function GamePage() {
         onResolvePower={handleResolvePower}
         onStartQueuedPower={handleStartQueuedPower}
         pendingStealGive={gameState.pendingStealGive}
+        logEntries={logEntries}
       />
 
       <ReactionOverlay
@@ -191,8 +198,8 @@ export default function GamePage() {
 
       {peekedCard && (
         <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
-          <div className="bg-black/70 rounded-2xl p-6 flex flex-col items-center gap-3 animate-slide-up pointer-events-none">
-            <span className="text-gold-400 text-sm font-medium">Peeked Card</span>
+          <div className="bg-midnight-950/90 backdrop-blur-md rounded-2xl p-6 flex flex-col items-center gap-3 animate-slide-up pointer-events-none border border-antique-gold-600/20 shadow-panel">
+            <span className="text-antique-gold-400 text-xs font-medium uppercase tracking-widest">Peeked Card</span>
             <div className="transform scale-150">
               <div className={`w-[70px] h-[100px] rounded-lg bg-white flex flex-col items-center justify-center shadow-card-hover ${
                 peekedCard.suit === 'hearts' || peekedCard.suit === 'diamonds' ? 'text-red-600' :
