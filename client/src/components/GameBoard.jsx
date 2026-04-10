@@ -65,6 +65,7 @@ export default function GameBoard({
   const [reactArmed, setReactArmed] = useState(false);
   const [optimisticPowerSecond, setOptimisticPowerSecond] = useState(null);
   const [optimisticDrawSlot, setOptimisticDrawSlot] = useState(null);
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
   const reactionOpen = reactionWindow?.active || false;
   const effectiveReact = reactArmed && reactionOpen && !pendingStealGive;
@@ -293,6 +294,112 @@ export default function GameBoard({
 
       {/* Floating event log — top-right, fades in/out */}
       <EventLog entries={logEntries} />
+
+      {/* Rules button — top-left */}
+      <button
+        type="button"
+        onClick={() => setShowRulesModal(true)}
+        aria-label="How to Play"
+        className="absolute top-2 left-2 z-20 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold text-antique-gold-700/50 hover:text-antique-gold-400 bg-midnight-950/50 border border-antique-gold-700/20 hover:border-antique-gold-600/40 transition-colors"
+      >
+        ?
+      </button>
+
+      {/* In-game rules modal */}
+      <AnimatePresence>
+        {showRulesModal && (
+          <motion.div
+            key="rules-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="absolute inset-0 z-50 flex items-center justify-center bg-midnight-950/85 backdrop-blur-sm p-3"
+            onClick={() => setShowRulesModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-sm max-h-[85vh] overflow-y-auto rounded-2xl bg-midnight-900 border border-antique-gold-600/25 shadow-panel flex flex-col"
+            >
+              <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-antique-gold-700/15 flex-shrink-0">
+                <span className="font-display text-lg text-antique-gold-400 tracking-display">How to Play</span>
+                <button
+                  type="button"
+                  onClick={() => setShowRulesModal(false)}
+                  aria-label="Close rules"
+                  className="text-antique-gold-700/50 hover:text-antique-gold-400 transition-colors text-xl leading-none px-1"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="px-4 py-3 space-y-4 text-antique-gold-600/70 text-xs leading-relaxed overflow-y-auto">
+                <section>
+                  <p className="text-antique-gold-500/80 font-medium text-[11px] uppercase tracking-widest mb-1.5">Card Values</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                    <span>1–9</span><span className="text-antique-gold-600/50">Face value</span>
+                    <span>10</span><span className="text-antique-gold-600/50">0 points</span>
+                    <span>J, Q, K</span><span className="text-antique-gold-600/50">10 points</span>
+                    <span>Joker</span><span className="text-antique-gold-600/50">−1 point</span>
+                  </div>
+                  <p className="mt-1.5 text-antique-gold-700/45">Lowest total wins.</p>
+                </section>
+
+                <hr className="border-antique-gold-700/15" />
+
+                <section>
+                  <p className="text-antique-gold-500/80 font-medium text-[11px] uppercase tracking-widest mb-1.5">Power Cards</p>
+                  <div className="space-y-1">
+                    <div><span className="text-antique-gold-400/80">J</span> — Peek one of your own face-down cards</div>
+                    <div><span className="text-antique-gold-400/80">Q</span> — Blindly swap any two face-down cards</div>
+                    <div><span className="text-antique-gold-400/80">Red K ♥♦</span> — Give any player a new card from the deck</div>
+                    <div><span className="text-antique-gold-400/80">Black K ♠♣</span> — Peek a face-down card, then move it</div>
+                  </div>
+                </section>
+
+                <hr className="border-antique-gold-700/15" />
+
+                <section>
+                  <p className="text-antique-gold-500/80 font-medium text-[11px] uppercase tracking-widest mb-1.5">Reactions</p>
+                  <p>When a card hits the pile, tap <span className="text-amber-400/80">React</span> then tap a matching card in your hand — or attempt to grab one from an opponent.</p>
+                  <ul className="mt-1.5 space-y-0.5 list-disc list-inside text-antique-gold-700/55">
+                    <li>One attempt per window (own card OR steal, not both)</li>
+                    <li>Failed steal: card returned, you draw a penalty card</li>
+                    <li>7+ cards in hand: can't attempt a steal</li>
+                    <li>Only the first successful reactor benefits</li>
+                  </ul>
+                </section>
+
+                <hr className="border-antique-gold-700/15" />
+
+                <section>
+                  <p className="text-antique-gold-500/80 font-medium text-[11px] uppercase tracking-widest mb-1.5">Calling Check</p>
+                  <p>At the <em>start</em> of your turn, before drawing, tap <span className="text-crimson-400/80">Check</span> if you think you have the lowest score.</p>
+                  <ul className="mt-1.5 space-y-0.5 list-disc list-inside text-antique-gold-700/55">
+                    <li>You still take a normal turn</li>
+                    <li>Every other player takes one final turn</li>
+                    <li>Lowest total wins</li>
+                  </ul>
+                </section>
+
+                <div className="pt-1 pb-1 text-center">
+                  <button
+                    type="button"
+                    onClick={() => window.open('/rules', '_blank', 'noopener,noreferrer')}
+                    className="text-[11px] text-antique-gold-700/40 hover:text-antique-gold-600/65 underline transition-colors"
+                  >
+                    Full rules ↗
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Opponents — scrollable so field + hand stay reachable on mobile */}
       <div

@@ -131,7 +131,7 @@ export default function LobbyPage() {
 
             <div className="text-center mt-3">
               <button
-                onClick={() => navigate('/rules')}
+                onClick={() => window.open('/rules', '_blank', 'noopener,noreferrer')}
                 className="text-xs text-antique-gold-700/40 hover:text-antique-gold-600/65 transition-colors underline"
               >
                 How to Play

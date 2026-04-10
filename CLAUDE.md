@@ -53,6 +53,7 @@ When `SUPABASE_JWT_SECRET` is unset, the socket auth middleware accepts all conn
 | `/leaderboard` | `LeaderboardPage` | Top 10 by wins |
 | `/lobby/:roomCode` | `LobbyPage` | Pre-game waiting room |
 | `/game/:roomCode` | `GamePage` | Active game |
+| `/rules` | `RulesPage` | How to Play — **no** `ProtectedRoute`, publicly accessible |
 
 `ProtectedRoute` allows access if `user` (Supabase session) **or** `guestMode` (sessionStorage flag). Unauthenticated non-guest visitors are redirected to `/`.
 
@@ -109,6 +110,10 @@ When a game ends, `updateWinStats(room, scores)` is called:
 | `useCompactTableLayout.js` | Layout math for the game board |
 | `useTableFeedback.js` | Visual feedback for table interactions |
 | `useEventLog.js` | Builds human-readable event log from `gameState.lastEventFeedback` and `lastReactionResult`; entries expire after 5 s, max 4 shown |
+
+### Client Utilities (`client/src/utils/`)
+- **`cardUtils.js`** — `getPointValue`, `getCardLabel`, `getSuitSymbol`, `getSuitColor`, `isPowerCard`, `isRedSuit`. Single source of truth for card display and point values on the client.
+- **`cardLayout.js`** — geometry helpers used by `useCompactTableLayout` for positioning cards on the game board.
 
 ### Notable Client Components (`client/src/components/`)
 - **`Header.jsx`** — top nav with logo, profile display, sign out button

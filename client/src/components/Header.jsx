@@ -21,7 +21,7 @@ export default function Header() {
 
       <div className="flex items-center gap-4">
         <button
-          onClick={() => navigate('/rules')}
+          onClick={() => window.open('/rules', '_blank', 'noopener,noreferrer')}
           className="text-sm text-antique-gold-700/55 hover:text-antique-gold-400 transition-colors hidden sm:block"
         >
           How to Play

@@ -119,6 +119,9 @@ function closeAndAdvance(io, room, gameState) {
   }
 
   if (skipAdvance) {
+    // Turn was already advanced when the card landed on the pile.
+    // A steal sets phase = 'steal-give', so we must reset it now that the trade is done.
+    gameState.phase = 'turn-draw';
     return;
   }
 
